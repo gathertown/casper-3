@@ -19,3 +19,7 @@ vendor/
 
 # Editors
 *.swp
+
+# Secrets
+deployments/base/secrets/*
+deployments/overlays/development/secrets/*
