@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/digitalocean/godo"
 	"github.com/gathertown/casper-3/internal/config"
@@ -13,6 +14,7 @@ import (
 
 var cfg = config.FromEnv()
 var logger = log.New(os.Stdout, cfg.Env)
+var label = fmt.Sprintf("heritage=casper-3,environment=%s", cfg.Env)
 
 type Node = common.Node
 type DigitalOceanDNS struct{}
@@ -22,7 +24,6 @@ func NewDOClient() *godo.Client {
 }
 
 func (d DigitalOceanDNS) Sync(nodes []Node) (bool, error) {
-	var records []godo.DomainRecord
 	var nodeHostnames, dnsRecords []string
 
 	// Setup the client
@@ -40,18 +41,21 @@ func (d DigitalOceanDNS) Sync(nodes []Node) (bool, error) {
 
 	// Generate arrays
 	for _, record := range txtRecords {
-		if record.Data == fmt.Sprintf("heritage=casper-3,environment=%s", cfg.Env) {
-			records = append(records, record)
-			dnsRecords = append(dnsRecords, record.Name)
+		if record.Data == label {
+			cName := strings.Split(record.Name, ".") // e.g. convert "sfu-v81hha.dev" to "sfu-v81hha" to allow comparison with hostnames
+			dnsRecords = append(dnsRecords, cName[0])
 		}
 	}
+	logger.Debug("DNS Records Found", "records", dnsRecords)
 
 	for _, node := range nodes {
 		nodeHostnames = append(nodeHostnames, node.Name)
 	}
+	logger.Debug("SFU nodes found", "nodes", nodeHostnames)
 
 	// Find new entries
 	addEntries := compare(nodeHostnames, dnsRecords)
+	logger.Info("Entries to be added", "entries", addEntries)
 	if len(addEntries) > 0 {
 		for _, name := range addEntries {
 			addressIPv4 := ""
@@ -66,7 +70,7 @@ func (d DigitalOceanDNS) Sync(nodes []Node) (bool, error) {
 			if addressIPv4 == "" {
 				logger.Info("IP address not found for entry", "name", name, "zone", cfg.Zone, "subdomain", cfg.Subdomain)
 			} else {
-				_, err := addRecord(context.TODO(), client, cfg.Zone, name, cfg.Subdomain, addressIPv4)
+				_, err := addRecord(context.TODO(), client, cfg.Zone, name, cfg.Subdomain, addressIPv4, cfg.Env)
 				if err != nil {
 					return false, err
 				}
@@ -76,9 +80,13 @@ func (d DigitalOceanDNS) Sync(nodes []Node) (bool, error) {
 
 	// Remove stale entries
 	deleteEntries := compare(dnsRecords, nodeHostnames)
+	logger.Info("Entries to be deleted", "entries", deleteEntries)
 	if len(deleteEntries) > 0 {
 		for _, name := range deleteEntries {
-			_, err := deleteRecord(context.TODO(), client, cfg.Zone, name)
+			// The 'Name' entry is the FQDN
+			cName := fmt.Sprintf("%s.%s.%s", name, cfg.Subdomain, cfg.Zone)
+			logger.Debug("Launching deletion", "record", cName)
+			_, err := deleteRecord(context.TODO(), client, cfg.Zone, cName)
 			if err != nil {
 				return false, err
 			}
@@ -108,20 +116,24 @@ func deleteRecord(ctx context.Context, client *godo.Client, zone string, name st
 		Page:    1,
 		PerPage: 1000,
 	}
-	txtRecords, _, err := client.Domains.RecordsByTypeAndName(ctx, zone, "TXT", name, opt)
+	txtRecords, txtResponse, err := client.Domains.RecordsByTypeAndName(ctx, zone, "TXT", name, opt)
 	if err != nil {
 		return false, err
 	}
+	logger.Debug("TXT record to be deleted", "records", txtRecords, "response", txtResponse)
 
-	aRecords, _, err := client.Domains.RecordsByTypeAndName(ctx, zone, "A", name, opt)
+	aRecords, aResponse, err := client.Domains.RecordsByTypeAndName(ctx, zone, "A", name, opt)
 	if err != nil {
 		return false, err
 	}
+	logger.Debug("A record to be deleted", "records", aRecords, "response", aResponse)
 
 	// merge slices
 	records := append(txtRecords, aRecords...)
+	logger.Debug("Records to be deleted", "records", records)
 
 	for _, record := range records {
+		logger.Debug("Deleting record", "record", record)
 		response, err := client.Domains.DeleteRecord(ctx, zone, record.ID)
 		if err != nil {
 			return false, err
@@ -131,7 +143,7 @@ func deleteRecord(ctx context.Context, client *godo.Client, zone string, name st
 	return true, nil
 }
 
-func addRecord(ctx context.Context, client *godo.Client, zone string, name string, sub string, addressIPv4 string) (bool, error) {
+func addRecord(ctx context.Context, client *godo.Client, zone string, name string, sub string, addressIPv4 string, env string) (bool, error) {
 	aRecordRequest := &godo.DomainRecordEditRequest{
 		Type: "A",
 		Name: fmt.Sprintf("%s.%s", name, sub), // Workaround for subdomains to work properly on digital ocean.
@@ -142,7 +154,7 @@ func addRecord(ctx context.Context, client *godo.Client, zone string, name strin
 	txtRecordRequest := &godo.DomainRecordEditRequest{
 		Type: "TXT",
 		Name: fmt.Sprintf("%s.%s", name, sub),
-		Data: addressIPv4,
+		Data: label,
 		TTL:  1800,
 	}
 

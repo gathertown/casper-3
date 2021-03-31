@@ -18,3 +18,10 @@ TODO
 ## Deployment
 
 TODO
+
+
+## Trivia
+
+The S.C. Magi System (マギ) are a trio of supercomputers designed by Dr. Naoko Akagi during her research into bio-computers while at Gehirn.
+[Casper-3](https://evangelion.fandom.com/wiki/Magi) is one of the three _Magi_.
+

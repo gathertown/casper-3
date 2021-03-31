@@ -7,16 +7,16 @@ commonLabels:
   ownedBY: infra
 
 images:
-  - name: gathertown/casper-3
-    newTag: "6392065"
+- name: gathertown/casper-3
+  newTag: bebf8f6
 
 patchesStrategicMerge:
-  - deployment.yaml
+- deployment.yaml
 
-bases:
-  - ../../base/
 
 secretGenerator:
-  - name: token
-    files:
-    - secrets/TOKEN
+- files:
+  - secrets/TOKEN
+  name: token
+resources:
+- ../../base/
