@@ -1,0 +1,84 @@
+version: 2.1
+parameters:
+  cluster_id_dev:
+    type: string
+    default: d52645d0-93e9-4594-aa9a-7b9dbecef8c5
+  cluster_id_stg:
+    type: string
+    default: 4151426f-a6f6-402c-b469-73ea1683af1c
+  cluster_id_prod:
+    type: string
+    default: 093da1a0-cf76-4c0f-8046-a7a83eebacf5
+
+orbs:
+  docker: circleci/docker@1.4.0
+  k8s: digitalocean/k8s@0.1.1
+  kubernetes: circleci/kubernetes@0.11.2
+  slack: circleci/slack@4.1.4
+  secrethub: secrethub/cli@1.1.0 # secrethub service account id: s-6hWjD3ITLqUO
+  browser-tools: circleci/browser-tools@1.1.1
+  jq: circleci/jq@2.2.0
+  kuz: finc/kustomize@0.0.1
+  envsubst: sawadashota/envsubst@1.1.0
+
+executors:
+  build-executor:
+    machine:
+      image: ubuntu-2004:202101-01
+    resource_class: medium
+
+commands:
+  get-commit-shorthash:
+    steps:
+      - run:
+          name: Get git commit shorthash
+          command: |
+            echo 'export SHORTHASH="$(git rev-parse --short HEAD)"' >> $BASH_ENV
+  build-and-push:
+    description: "build and push docker image to registry"
+    parameters:
+      image:
+        type: string
+        default: "gathertown/casper-3"
+      dockerfile:
+        type: string
+        default: "Dockerfile"
+    steps:
+      - checkout
+      - get-commit-shorthash
+      - docker/build:
+          dockerfile: <<parameters.dockerfile>>
+          image: <<parameters.image>>
+          tag: $SHORTHASH
+      - docker/check
+      - docker/push:
+          image: <<parameters.image>>
+          tag: $SHORTHASH
+
+jobs:
+  build-and-push:
+    parameters:
+      executor:
+        default: build-executor
+        type: executor
+      image:
+        type: string
+        default: "gathertown/casper-3"
+      dockerfile:
+        type: string
+        default: "Dockerfile"
+    executor: <<parameters.executor>>
+    steps:
+      - build-and-push:
+          dockerfile: <<parameters.dockerfile>>
+          image: <<parameters.image>>
+
+workflows:
+  build-and-push:
+    jobs:
+      - build-and-push:
+          dockerfile: Dockerfile
+          filters:
+            branches:
+              only:
+                - main
