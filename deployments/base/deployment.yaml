@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: casper-3
+  labels:
+    app: casper-3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: casper-3
+  template:
+    metadata:
+      labels:
+        app: casper-3
+    spec:
+      serviceAccountName: casper-3
+      containers:
+        - name: casper-3
+          image: gathertown/casper-3:6392065
+      imagePullSecrets:
+        - name: priv-docker-registry
+      nodeSelector:
+        doks.digitalocean.com/node-pool: default

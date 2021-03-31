@@ -1,0 +1,14 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: casper-3
+  labels:
+    app: casper-3
+subjects:
+- kind: ServiceAccount
+  name: casper-3
+  namespace: infrastructure
+roleRef:
+  kind: ClusterRole
+  name: casper-3
+  apiGroup: rbac.authorization.k8s.io

@@ -1,0 +1,13 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: casper-3
+  labels:
+    app: casper-3
+rules:
+  - apiGroups:
+      - "*"
+    resources:
+      - nodes
+    verbs:
+      - list
