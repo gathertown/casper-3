@@ -1,4 +1,4 @@
-package digitalocean
+package cloudflare
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/digitalocean/godo"
+	cloudflare "github.com/cloudflare/cloudflare-go"
 	"github.com/gathertown/casper-3/internal/config"
 	common "github.com/gathertown/casper-3/pkg"
 	"github.com/gathertown/casper-3/pkg/log"
@@ -17,17 +17,21 @@ var logger = log.New(os.Stdout, cfg.Env)
 var label = fmt.Sprintf("heritage=casper-3,environment=%s", cfg.Env)
 
 type Node = common.Node
-type DigitalOceanDNS struct{}
+type CloudFlareDNS struct{}
 
-func NewDOClient() *godo.Client {
-	return godo.NewFromToken(cfg.Token)
+func NewCFClient() *cloudflare.API {
+	api, err := cloudflare.NewWithAPIToken(cfg.Token)
+	if err != nil {
+		fmt.Println(err)
+	}
+	return api
 }
 
-func (d DigitalOceanDNS) Sync(nodes []Node) (bool, error) {
+func (d CloudFlareDNS) Sync(nodes []Node) (bool, error) {
 	var nodeHostnames, dnsRecords []string
 
 	// Setup the client
-	client := NewDOClient()
+	client := NewCFClient()
 
 	// The source of truth are the TXT records as they are created and deleted alongside 'A' records.
 	recordType := "TXT"
@@ -35,7 +39,7 @@ func (d DigitalOceanDNS) Sync(nodes []Node) (bool, error) {
 	// Fetch all TXT DNS
 	txtRecords, err := getRecords(context.TODO(), client, cfg.Zone, recordType)
 	if err != nil {
-		logger.Info("Error occured while fetching records", "provider", cfg.Provider, "zone", cfg.Zone, "host", cfg.Subdomain)
+		logger.Info("Error occured while fetching records", "provider", cfg.Provider, "zone", cfg.Zone)
 		return false, err
 	}
 
@@ -68,9 +72,9 @@ func (d DigitalOceanDNS) Sync(nodes []Node) (bool, error) {
 			}
 			// Does this check make sense?
 			if addressIPv4 == "" {
-				logger.Info("IP address not found for entry", "name", name, "zone", cfg.Zone, "subdomain", cfg.Subdomain)
+				logger.Info("IP address not found for entry", "name", name, "zone", cfg.Zone)
 			} else {
-				_, err := addRecord(context.TODO(), client, cfg.Zone, name, cfg.Subdomain, addressIPv4, cfg.Env)
+				_, err := addRecord(context.TODO(), client, cfg.Zone, name, addressIPv4, cfg.Env)
 				if err != nil {
 					return false, err
 				}
@@ -79,7 +83,7 @@ func (d DigitalOceanDNS) Sync(nodes []Node) (bool, error) {
 	}
 
 	// Remove stale entries
-	deleteEntries := common.Compare(dnsRecords, nodeHostnames)
+	deleteEntries := compare(dnsRecords, nodeHostnames)
 	logger.Info("Entries to be deleted", "entries", deleteEntries)
 	if len(deleteEntries) > 0 {
 		for _, name := range deleteEntries {
@@ -97,36 +101,47 @@ func (d DigitalOceanDNS) Sync(nodes []Node) (bool, error) {
 	return true, nil
 }
 
-func getRecords(ctx context.Context, client *godo.Client, domain string, recordType string) ([]godo.DomainRecord, error) {
-	opt := &godo.ListOptions{
-		Page:    1,
-		PerPage: 1000,
-	}
-	records, _, err := client.Domains.RecordsByType(ctx, domain, recordType, opt)
+func getRecords(ctx context.Context, client *cloudflare.API, zone string, recordType string) ([]cloudflare.DNSRecord, error) {
 
+	// Get ZoneID
+	zoneID, err := client.ZoneIDByName(zone)
 	if err != nil {
 		return nil, err
 	}
+
+	// Filtering by content doesn't work unfortunately,
+	// see https://github.com/cloudflare/cloudflare-go/issues/613
+	record := cloudflare.DNSRecord{Type: recordType}
+	records, err := client.DNSRecords(ctx, zoneID, record)
+	if err != nil {
+		return nil, err
+	}
+
 	logger.Debug("Fetched DNS records", "type", recordType, "records", records)
 	return records, err
 }
 
-func deleteRecord(ctx context.Context, client *godo.Client, zone string, name string) (bool, error) {
-	opt := &godo.ListOptions{
-		Page:    1,
-		PerPage: 1000,
-	}
-	txtRecords, txtResponse, err := client.Domains.RecordsByTypeAndName(ctx, zone, "TXT", name, opt)
+func deleteRecord(ctx context.Context, client *cloudflare.API, zone string, name string) (bool, error) {
+	// Get ZoneID
+	zoneID, err := client.ZoneIDByName(zone)
 	if err != nil {
 		return false, err
 	}
-	logger.Debug("TXT record to be deleted", "records", txtRecords, "response", txtResponse)
 
-	aRecords, aResponse, err := client.Domains.RecordsByTypeAndName(ctx, zone, "A", name, opt)
+	fqdn := fmt.Sprintf("%s.%s", name, zone)
+	txtRecord := cloudflare.DNSRecord{Name: fqdn, Type: "TXT"}
+	txtRecords, err := client.DNSRecords(ctx, zoneID, txtRecord)
 	if err != nil {
 		return false, err
 	}
-	logger.Debug("A record to be deleted", "records", aRecords, "response", aResponse)
+	logger.Debug("TXT record to be deleted", "records", txtRecords)
+
+	aRecord := cloudflare.DNSRecord{Name: fqdn, Type: "A"}
+	aRecords, err := client.DNSRecords(ctx, zoneID, aRecord)
+	if err != nil {
+		return false, err
+	}
+	logger.Debug("A record to be deleted", "records", aRecords)
 
 	// merge slices
 	records := append(txtRecords, aRecords...)
@@ -134,7 +149,7 @@ func deleteRecord(ctx context.Context, client *godo.Client, zone string, name st
 
 	for _, record := range records {
 		logger.Debug("Deleting record", "record", record)
-		response, err := client.Domains.DeleteRecord(ctx, zone, record.ID)
+		response := client.DeleteDNSRecord(ctx, zoneID, record.ID)
 		if err != nil {
 			return false, err
 		}
@@ -143,31 +158,59 @@ func deleteRecord(ctx context.Context, client *godo.Client, zone string, name st
 	return true, nil
 }
 
-func addRecord(ctx context.Context, client *godo.Client, zone string, name string, sub string, addressIPv4 string, env string) (bool, error) {
-	aRecordRequest := &godo.DomainRecordEditRequest{
+func addRecord(ctx context.Context, client *cloudflare.API, zone string, name string, addressIPv4 string, env string) (bool, error) {
+
+	// Get ZoneID
+	zoneID, err := client.ZoneIDByName(zone)
+	if err != nil {
+		return false, err
+	}
+
+	aRecordRequest := cloudflare.DNSRecord{
 		Type: "A",
-		Name: fmt.Sprintf("%s.%s", name, sub), // Workaround for subdomains to work properly on digital ocean.
+		Name: name,
 		Data: addressIPv4,
 		TTL:  1800,
 	}
 
-	txtRecordRequest := &godo.DomainRecordEditRequest{
+	txtRecordRequest := cloudflare.DNSRecord{
 		Type: "TXT",
-		Name: fmt.Sprintf("%s.%s", name, sub),
+		Name: name,
 		Data: label,
 		TTL:  1800,
 	}
 
-	aRecord, aRecordResponse, err := client.Domains.CreateRecord(ctx, zone, aRecordRequest)
+	aRecord, err := client.CreateDNSRecord(ctx, zoneID, aRecordRequest)
 	if err != nil {
 		return false, err
 	}
-	logger.Info("Added record", "zone", zone, "name", name, "type", "A", "response", aRecordResponse, "record", aRecord)
-	txtRecord, txtRecordResponse, err := client.Domains.CreateRecord(ctx, zone, txtRecordRequest)
+	logger.Info("Added record", "zone", zone, "name", name, "type", "A", "record", aRecord)
+
+	txtRecord, err := client.CreateDNSRecord(ctx, zone, txtRecordRequest)
 	if err != nil {
 		return false, err
 	}
-	logger.Info("Added DNS record", "zone", zone, "name", name, "type", "TXT", "response", txtRecordResponse, "record", txtRecord)
+	logger.Info("Added DNS record", "zone", zone, "name", name, "type", "TXT", "record", txtRecord)
 
 	return true, err
+}
+
+// Compare slices: https://stackoverflow.com/a/45428032/577133
+// Returns []string of elements found in 'a' but not in 'b'.
+func compare(a, b []string) []string {
+	mb := make(map[string]struct{}, len(b))
+
+	for _, x := range b {
+		mb[x] = struct{}{}
+	}
+
+	var diff []string
+
+	for _, x := range a {
+		if _, found := mb[x]; !found {
+			diff = append(diff, x)
+		}
+	}
+
+	return diff
 }
