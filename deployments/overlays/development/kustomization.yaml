@@ -8,7 +8,7 @@ commonLabels:
 
 images:
 - name: gathertown/casper-3
-  newTag: bebf8f6
+  newTag: 3bdb171
 
 patchesStrategicMerge:
 - deployment.yaml

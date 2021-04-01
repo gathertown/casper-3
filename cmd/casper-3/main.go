@@ -11,6 +11,7 @@ import (
 	common "github.com/gathertown/casper-3/pkg"
 	"github.com/gathertown/casper-3/pkg/kubernetes"
 	"github.com/gathertown/casper-3/pkg/log"
+	cloudflare "github.com/gathertown/casper-3/pkg/providers/cloudflare"
 	digitalocean "github.com/gathertown/casper-3/pkg/providers/digitalocean"
 )
 
@@ -39,7 +40,7 @@ func main() {
 		p = digitalocean.DigitalOceanDNS{}
 	}
 	if cfg.Provider == "cloudflare" {
-		// p = cloudflare.DigitalOceanDNS{}
+		p = cloudflare.CloudFlareDNS{}
 	}
 	for {
 		c, err := kubernetes.New()
@@ -54,7 +55,11 @@ func main() {
 			fmt.Println(err)
 		}
 
-		p.Sync(n)
+		_, err = p.Sync(n)
+		if err != nil {
+			msg := fmt.Sprintf("%v", err)
+			logger.Info(msg)
+		}
 
 		time.Sleep(time.Duration(interval) * time.Second)
 	}

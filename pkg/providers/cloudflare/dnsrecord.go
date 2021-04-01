@@ -39,18 +39,19 @@ func (d CloudFlareDNS) Sync(nodes []Node) (bool, error) {
 	// Fetch all TXT DNS
 	txtRecords, err := getRecords(context.TODO(), client, cfg.Zone, recordType)
 	if err != nil {
-		logger.Info("Error occured while fetching records", "provider", cfg.Provider, "zone", cfg.Zone)
+		msg := fmt.Sprintf("%v", err)
+		logger.Info("Error occured while fetching records", "provider", cfg.Provider, "zone", cfg.Zone, "error", msg)
 		return false, err
 	}
 
 	// Generate arrays
 	for _, record := range txtRecords {
-		if record.Data == label {
+		if record.Content == label {
 			cName := strings.Split(record.Name, ".") // e.g. convert "sfu-v81hha.dev" to "sfu-v81hha" to allow comparison with hostnames
 			dnsRecords = append(dnsRecords, cName[0])
 		}
 	}
-	logger.Debug("DNS Records Found", "records", dnsRecords)
+	logger.Debug("DNS records found", "records", dnsRecords)
 
 	for _, node := range nodes {
 		nodeHostnames = append(nodeHostnames, node.Name)
@@ -88,7 +89,7 @@ func (d CloudFlareDNS) Sync(nodes []Node) (bool, error) {
 	if len(deleteEntries) > 0 {
 		for _, name := range deleteEntries {
 			// The 'Name' entry is the FQDN
-			cName := fmt.Sprintf("%s.%s.%s", name, cfg.Subdomain, cfg.Zone)
+			cName := fmt.Sprintf("%s.%s", name, cfg.Zone)
 			logger.Debug("Launching deletion", "record", cName)
 			_, err := deleteRecord(context.TODO(), client, cfg.Zone, cName)
 			if err != nil {
@@ -117,44 +118,39 @@ func getRecords(ctx context.Context, client *cloudflare.API, zone string, record
 		return nil, err
 	}
 
-	logger.Debug("Fetched DNS records", "type", recordType, "records", records)
+	logger.Debug("Fetched DNS records", "type", recordType)
 	return records, err
 }
 
-func deleteRecord(ctx context.Context, client *cloudflare.API, zone string, name string) (bool, error) {
+func deleteRecord(ctx context.Context, client *cloudflare.API, zone string, fqdn string) (bool, error) {
 	// Get ZoneID
 	zoneID, err := client.ZoneIDByName(zone)
 	if err != nil {
 		return false, err
 	}
 
-	fqdn := fmt.Sprintf("%s.%s", name, zone)
+	logger.Debug("Deleting", "FQDN", fqdn)
+
 	txtRecord := cloudflare.DNSRecord{Name: fqdn, Type: "TXT"}
 	txtRecords, err := client.DNSRecords(ctx, zoneID, txtRecord)
 	if err != nil {
 		return false, err
 	}
-	logger.Debug("TXT record to be deleted", "records", txtRecords)
 
 	aRecord := cloudflare.DNSRecord{Name: fqdn, Type: "A"}
 	aRecords, err := client.DNSRecords(ctx, zoneID, aRecord)
 	if err != nil {
 		return false, err
 	}
-	logger.Debug("A record to be deleted", "records", aRecords)
 
-	// merge slices
 	records := append(txtRecords, aRecords...)
-	logger.Debug("Records to be deleted", "records", records)
 
 	for _, record := range records {
-		logger.Debug("Deleting record", "record", record)
-		// response := client.DeleteDNSRecord(ctx, zoneID, record.ID)
-		// if err != nil {
-		// 	return false, err
-		// }
-		response := "records not actually deleted!"
-		logger.Info("Deleted DNS record", "zone", zone, "record", record.Name, "type", record.Type, "response", response)
+		err := client.DeleteDNSRecord(ctx, zoneID, record.ID)
+		if err != nil {
+			return false, err
+		}
+		logger.Info("Deleted DNS record", "zone", zone, "record", record.Name, "type", record.Type)
 	}
 	return true, nil
 }
@@ -167,31 +163,33 @@ func addRecord(ctx context.Context, client *cloudflare.API, zone string, name st
 		return false, err
 	}
 
-	aRecordRequest := cloudflare.DNSRecord{
-		Type: "A",
-		Name: name,
-		Data: addressIPv4,
-		TTL:  1800,
-	}
-
 	txtRecordRequest := cloudflare.DNSRecord{
-		Type: "TXT",
-		Name: name,
-		Data: label,
-		TTL:  1800,
+		Type:    "TXT",
+		Name:    name,
+		Content: label,
+		TTL:     1800,
 	}
 
+	logger.Info("trying to add record", "zone", zone, "name", name, "type", "TXT")
+	txtRecord, err := client.CreateDNSRecord(ctx, zoneID, txtRecordRequest)
+	if err != nil {
+		return false, err
+	}
+	logger.Info("Added DNS record", "zone", zone, "name", name, "type", "TXT", "success", txtRecord.Success)
+
+	aRecordRequest := cloudflare.DNSRecord{
+		Type:    "A",
+		Name:    name,
+		Content: addressIPv4,
+		TTL:     1800,
+	}
+
+	logger.Info("trying to add record", "zone", zone, "name", name, "type", "A")
 	aRecord, err := client.CreateDNSRecord(ctx, zoneID, aRecordRequest)
 	if err != nil {
 		return false, err
 	}
-	logger.Info("Added record", "zone", zone, "name", name, "type", "A", "record", aRecord)
-
-	txtRecord, err := client.CreateDNSRecord(ctx, zone, txtRecordRequest)
-	if err != nil {
-		return false, err
-	}
-	logger.Info("Added DNS record", "zone", zone, "name", name, "type", "TXT", "record", txtRecord)
+	logger.Info("Added record", "zone", zone, "name", name, "type", "A", "success", aRecord.Success)
 
 	return true, err
 }

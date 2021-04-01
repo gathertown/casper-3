@@ -46,7 +46,6 @@ func (d DigitalOceanDNS) Sync(nodes []Node) (bool, error) {
 			dnsRecords = append(dnsRecords, cName[0])
 		}
 	}
-	logger.Debug("DNS Records Found", "records", dnsRecords)
 
 	for _, node := range nodes {
 		nodeHostnames = append(nodeHostnames, node.Name)
@@ -80,7 +79,6 @@ func (d DigitalOceanDNS) Sync(nodes []Node) (bool, error) {
 
 	// Remove stale entries
 	deleteEntries := common.Compare(dnsRecords, nodeHostnames)
-	logger.Info("Entries to be deleted", "entries", deleteEntries)
 	if len(deleteEntries) > 0 {
 		for _, name := range deleteEntries {
 			// The 'Name' entry is the FQDN
@@ -116,29 +114,26 @@ func deleteRecord(ctx context.Context, client *godo.Client, zone string, name st
 		Page:    1,
 		PerPage: 1000,
 	}
-	txtRecords, txtResponse, err := client.Domains.RecordsByTypeAndName(ctx, zone, "TXT", name, opt)
+
+	txtRecords, _, err := client.Domains.RecordsByTypeAndName(ctx, zone, "TXT", name, opt)
 	if err != nil {
 		return false, err
 	}
-	logger.Debug("TXT record to be deleted", "records", txtRecords, "response", txtResponse)
 
-	aRecords, aResponse, err := client.Domains.RecordsByTypeAndName(ctx, zone, "A", name, opt)
+	aRecords, _, err := client.Domains.RecordsByTypeAndName(ctx, zone, "A", name, opt)
 	if err != nil {
 		return false, err
 	}
-	logger.Debug("A record to be deleted", "records", aRecords, "response", aResponse)
 
-	// merge slices
 	records := append(txtRecords, aRecords...)
-	logger.Debug("Records to be deleted", "records", records)
 
 	for _, record := range records {
-		logger.Debug("Deleting record", "record", record)
+		logger.Debug("Deleting", "record", record)
 		response, err := client.Domains.DeleteRecord(ctx, zone, record.ID)
 		if err != nil {
 			return false, err
 		}
-		logger.Info("Deleted DNS record", "zone", zone, "record", record.Name, "type", record.Type, "response", response)
+		logger.Info("Deleted DNS record", "zone", zone, "record", record.Name, "type", record.Type, "responseStatus", response.Status)
 	}
 	return true, nil
 }
@@ -158,16 +153,17 @@ func addRecord(ctx context.Context, client *godo.Client, zone string, name strin
 		TTL:  1800,
 	}
 
-	aRecord, aRecordResponse, err := client.Domains.CreateRecord(ctx, zone, aRecordRequest)
+	_, aRecordResponse, err := client.Domains.CreateRecord(ctx, zone, aRecordRequest)
 	if err != nil {
 		return false, err
 	}
-	logger.Info("Added record", "zone", zone, "name", name, "type", "A", "response", aRecordResponse, "record", aRecord)
-	txtRecord, txtRecordResponse, err := client.Domains.CreateRecord(ctx, zone, txtRecordRequest)
+	logger.Info("Added record", "zone", zone, "name", name, "type", "A", "responseStatus", aRecordResponse.Status)
+
+	_, txtRecordResponse, err := client.Domains.CreateRecord(ctx, zone, txtRecordRequest)
 	if err != nil {
 		return false, err
 	}
-	logger.Info("Added DNS record", "zone", zone, "name", name, "type", "TXT", "response", txtRecordResponse, "record", txtRecord)
+	logger.Info("Added DNS record", "zone", zone, "name", name, "type", "TXT", "responseStatus", txtRecordResponse.Status)
 
 	return true, err
 }

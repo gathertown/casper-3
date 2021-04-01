@@ -8,15 +8,15 @@ commonLabels:
 
 images:
 - name: gathertown/casper-3
-  newTag: bebf8f6
+  newTag: 4d7543c
 
 patchesStrategicMerge:
 - deployment.yaml
-
 
 secretGenerator:
 - files:
   - secrets/TOKEN
   name: token
+
 resources:
 - ../../base/

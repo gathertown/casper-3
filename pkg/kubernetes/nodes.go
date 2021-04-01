@@ -44,6 +44,5 @@ func (c *Cluster) GetNodes(labelKey string, labelValue string) (*v1.NodeList, er
 	if err != nil {
 		return nil, err
 	}
-	logger.Debug("returns nodes list")
 	return n, nil
 }
