@@ -22,4 +22,4 @@ vendor/
 
 # Secrets
 deployments/base/secrets/*
-deployments/overlays/development/secrets/*
+deployments/overlays/*/secrets/*
