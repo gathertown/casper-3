@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: casper-3
+spec:
+  template:
+    spec:
+      containers:
+        - name: casper-3
+          image: gathertown/casper-3:6392065
+          envFrom:
+            - secretRef:
+                name: token
+          env:
+            - name: ENV
+              value: staging
+            - name: PROVIDER
+              value: digitalocean
+            - name: SUBDOMAIN
+              value: stg
+            - name: ZONE
+              value: k8s.gather.town
+            - name: INTERVAL
+              value: "60"
+            - name: LABEL_KEY
+              value: doks.digitalocean.com/node-pool
+            - name: LABEL_VALUE
+              value: sfu
