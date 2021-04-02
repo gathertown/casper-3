@@ -13,11 +13,17 @@ created based on the DNS provider. Conversely the application will delete DNS en
 
 ##  Development
 
-TODO
+Develop and open PRs against the `develop` branch. The flow is as follows:
 
-## Deployment
+```
+develop -> staging -> main
+```
 
-TODO
+Each will deploy the application in the respective environments:
+
+* develop branch will deploy the application to the `dev` cluster
+* staging branch will deploy the application to the `stg` cluster
+* production branch will deploy the application to the `prod` cluster
 
 
 ## Trivia
