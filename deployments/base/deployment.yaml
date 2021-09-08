@@ -18,6 +18,13 @@ spec:
       containers:
         - name: casper-3
           image: gathertown/casper-3:6392065
+          env:
+            - name: INTERVAL
+              value: "60"
+            - name: LABEL_KEY
+              value: doks.digitalocean.com/node-pool
+            - name: LABEL_VALUE
+              value: sfu
       imagePullSecrets:
         - name: priv-docker-registry
       nodeSelector:

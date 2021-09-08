@@ -1,20 +1,4 @@
 version: 2.1
-parameters:
-  cluster_id_dev:
-    type: string
-    default: d52645d0-93e9-4594-aa9a-7b9dbecef8c5
-  cluster_id_stg:
-    type: string
-    default: 4151426f-a6f6-402c-b469-73ea1683af1c
-  cluster_id_prod:
-    type: string
-    default: 093da1a0-cf76-4c0f-8046-a7a83eebacf5
-  cluster_id_stg_do_nyc3_a:
-    type: string
-    default: 95a857e0-c10b-415e-83a3-4666e1d66005
-  cluster_id_stg_do_fra1_a:
-    type: string
-    default: a366a34a-4f57-4fbf-a892-097b7c7d5771
 
 orbs:
   docker: circleci/docker@1.4.0
@@ -46,6 +30,13 @@ commands:
       cluster:
         type: string
         default: abcd
+      provider:
+        type: string
+      subdomain:
+        type: string
+        default: ""
+      zone:
+        type: string
     steps:
       - checkout
       - get-commit-shorthash
@@ -55,16 +46,24 @@ commands:
       - k8s/initialize:
           cluster: << parameters.cluster >>
       - run:
+          environment:
+            - ENV: <<parameters.environment>>
+            - PROVIDER: <<parameters.provider>>
+            - SUBDOMAIN: <<parameters.subdomain>>
+            - ZONE: <<parameters.zone>>
           command: |
             mkdir ~/.secrethub
             echo ${SECRETHUB_CREDENTIAL} > ~/.secrethub/credential
             curl -LO https://github.com/secrethub/secrethub-cli/releases/download/v0.41.2/secrethub-v0.41.2-linux-amd64.tar.gz
             tar zxvf secrethub-v0.41.2-linux-amd64.tar.gz -C /tmp
-            mkdir -p deployments/base/secrets deployments/overlays/<<parameters.environment>>/secrets
+            mkdir -p deployments/base/secrets deployments/overlays/cluster/secrets
             /tmp/bin/secrethub read -n gather/gather-town/deploy/terraform/dockerhub_credentials > deployments/base/secrets/priv-docker-registry
-            /tmp/bin/secrethub read -n gather/gather-town/deploy/terraform/<<parameters.token>>  > deployments/overlays/<<parameters.environment>>/secrets/TOKEN
-            cd deployments/overlays/<<parameters.environment>>
+            /tmp/bin/secrethub read -n gather/gather-town/deploy/terraform/<<parameters.token>>  > deployments/overlays/cluster/secrets/TOKEN
+            cd deployments/overlays/cluster
             kustomize edit set image << parameters.image >>:${SHORTHASH}
+            envsubst < deployment.yaml > deployment-temp.yaml
+            rm -f deployment.yaml
+            mv deployment-temp.yaml deployment.yaml
             kustomize build . | kubectl apply -f -
   get-commit-shorthash:
     steps:
@@ -121,12 +120,22 @@ jobs:
         type: string
       cluster:
         type: string
+      provider:
+        type: string
+      subdomain:
+        type: string
+        default: ""
+      zone:
+        type: string
     executor: <<parameters.executor>>
     steps:
       - deploy:
           environment: <<parameters.environment>>
           token: <<parameters.token>>
           cluster: <<parameters.cluster>>
+          provider: <<parameters.provider>>
+          subdomain: <<parameters.subdomain>>
+          zone: <<parameters.zone>>
 
 workflows:
   build-and-push:
@@ -139,57 +148,150 @@ workflows:
                 - develop
                 - staging
                 - main
+
+      # development cluster
       - deploy:
-          name: deploy-development
+          name: development
           requires:
             - build-and-push
           environment: development
           token: TF_VAR_do_token
-          cluster: << pipeline.parameters.cluster_id_dev >>
+          cluster: $K8S_DEV_NYC1
+          provider: digitalocean
+          subdomain: dev
+          zone: k8s.gather.town
           filters:
             branches:
               only:
                 - develop
+
+      # staging clusters
       - deploy:
-          name: deploy-staging
-          requires:
-            - build-and-push
-          token: TF_VAR_do_token
-          environment: staging
-          cluster: << pipeline.parameters.cluster_id_stg >>
-          filters:
-            branches:
-              only:
-                - staging
-      - deploy:
-          name: deploy-staging-do-nyc3-a
+          name: staging-do-nyc3-a
           requires:
             - build-and-push
           token: TF_VAR_cf_token
           environment: staging-do-nyc3-a
-          cluster: << pipeline.parameters.cluster_id_stg_do_nyc3_a >>
+          cluster: $K8S_STG_NYC3_A
+          provider: cloudflare
+          subdomain: nyc3-a.stg.do
+          zone: gather.town
           filters:
             branches:
               only:
                 - staging
       - deploy:
-          name: deploy-staging-do-fra1-a
+          name: staging-do-fra1-a
           requires:
             - build-and-push
           token: TF_VAR_cf_token
           environment: staging-do-fra1-a
-          cluster: << pipeline.parameters.cluster_id_stg_do_fra1_a >>
+          cluster: $K8S_STG_FRA1_A
+          provider: cloudflare
+          subdomain: fra1-a.stg.do
+          zone: gather.town
+          filters:
+            branches:
+              only:
+                - staging
+
+      # production clusters
+      - deploy:
+          name: production-do-blr1-a
+          requires:
+            - build-and-push
+          token: TF_VAR_cf_token
+          environment: production-do-blr1-a
+          cluster: $K8S_PROD_BLR1_A
+          provider: cloudflare
+          subdomain: blr1-a.prod.do
+          zone: gather.town
+          filters:
+            branches:
+              only:
+                - main
+      - deploy:
+          name: production-do-fra1-a
+          requires:
+            - build-and-push
+          token: TF_VAR_cf_token
+          environment: production-do-fra1-a
+          cluster: $K8S_PROD_FRA1_A
+          provider: cloudflare
+          subdomain: fra1-a.prod.do
+          zone: gather.town
+          filters:
+            branches:
+              only:
+                - main
+      - deploy:
+          name: production-do-sgp1-a
+          requires:
+            - build-and-push
+          token: TF_VAR_cf_token
+          environment: production-do-sgp1-a
+          cluster: $K8S_PROD_SGP1_A
+          provider: cloudflare
+          subdomain: sgp1-a.prod.do
+          zone: gather.town
+          filters:
+            branches:
+              only:
+                - main
+      - deploy:
+          name: production-do-sfo3-a
+          requires:
+            - build-and-push
+          token: TF_VAR_cf_token
+          environment: production-do-sfo3-a
+          cluster: $K8S_PROD_SFO3_A
+          provider: cloudflare
+          subdomain: sfo3-a.prod.do
+          zone: gather.town
+          filters:
+            branches:
+              only:
+                - main
+      - deploy:
+          name: production-do-nyc3-a
+          requires:
+            - build-and-push
+          token: TF_VAR_cf_token
+          environment: production-do-nyc3-a
+          cluster: $K8S_PROD_NYC3_A
+          provider: cloudflare
+          subdomain: nyc3-a.prod.do
+          zone: gather.town
+          filters:
+            branches:
+              only:
+                - main
+
+      # legacy clusters
+      - deploy:
+          name: staging
+          requires:
+            - build-and-push
+          token: TF_VAR_do_token
+          environment: staging
+          cluster: $K8S_STG_LEGACY
+          provider: digitalocean
+          subdomain: stg
+          zone: k8s.gather.town
           filters:
             branches:
               only:
                 - staging
       - deploy:
-          name: deploy-production
+          name: production
           requires:
             - build-and-push
           environment: production
           token: TF_VAR_cf_token
-          cluster: << pipeline.parameters.cluster_id_prod >>
+          cluster: $K8S_PROD_LEGACY
+          provider: cloudflare
+          subdomain: ""
+          zone: gather.town
           filters:
             branches:
               only:
