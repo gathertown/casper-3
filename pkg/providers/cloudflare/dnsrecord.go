@@ -61,8 +61,8 @@ func (d CloudFlareDNS) Sync(nodes []Node) (bool, error) {
 
 	// Find new entries
 	addEntries := common.Compare(nodeHostnames, dnsRecords)
-	logger.Info("Entries to be added", "entries", addEntries)
 	if len(addEntries) > 0 {
+		logger.Info("Entries to be added", "entries", addEntries)
 		for _, name := range addEntries {
 			addressIPv4 := ""
 			// this loop seems a bit inefficient at first glance
@@ -86,8 +86,8 @@ func (d CloudFlareDNS) Sync(nodes []Node) (bool, error) {
 
 	// Remove stale entries
 	deleteEntries := compare(dnsRecords, nodeHostnames)
-	logger.Info("Entries to be deleted", "entries", deleteEntries)
 	if len(deleteEntries) > 0 {
+		logger.Info("Entries to be deleted", "entries", deleteEntries)
 		for _, name := range deleteEntries {
 			// The 'Name' entry is the FQDN
 			cName := fmt.Sprintf("%s.%s", name, cfg.Zone)
