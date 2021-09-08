@@ -21,4 +21,4 @@ spec:
       imagePullSecrets:
         - name: priv-docker-registry
       nodeSelector:
-        doks.digitalocean.com/node-pool: default
+        doks.digitalocean.com/node-pool: infra
