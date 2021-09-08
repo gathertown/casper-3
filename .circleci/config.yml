@@ -9,6 +9,12 @@ parameters:
   cluster_id_prod:
     type: string
     default: 093da1a0-cf76-4c0f-8046-a7a83eebacf5
+  cluster_id_stg_do_nyc3_a:
+    type: string
+    default: 95a857e0-c10b-415e-83a3-4666e1d66005
+  cluster_id_stg_do_fra1_a:
+    type: string
+    default: a366a34a-4f57-4fbf-a892-097b7c7d5771
 
 orbs:
   docker: circleci/docker@1.4.0
@@ -122,7 +128,6 @@ jobs:
           token: <<parameters.token>>
           cluster: <<parameters.cluster>>
 
-
 workflows:
   build-and-push:
     jobs:
@@ -135,6 +140,7 @@ workflows:
                 - staging
                 - main
       - deploy:
+          name: deploy-development
           requires:
             - build-and-push
           environment: development
@@ -145,6 +151,7 @@ workflows:
               only:
                 - develop
       - deploy:
+          name: deploy-staging
           requires:
             - build-and-push
           token: TF_VAR_do_token
@@ -155,6 +162,29 @@ workflows:
               only:
                 - staging
       - deploy:
+          name: deploy-staging-do-nyc3-a
+          requires:
+            - build-and-push
+          token: TF_VAR_cf_token
+          environment: staging-do-nyc3-a
+          cluster: << pipeline.parameters.cluster_id_stg_do_nyc3_a >>
+          filters:
+            branches:
+              only:
+                - staging
+      - deploy:
+          name: deploy-staging-do-fra1-a
+          requires:
+            - build-and-push
+          token: TF_VAR_cf_token
+          environment: staging-do-fra1-a
+          cluster: << pipeline.parameters.cluster_id_stg_do_fra1_a >>
+          filters:
+            branches:
+              only:
+                - staging
+      - deploy:
+          name: deploy-production
           requires:
             - build-and-push
           environment: production

@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: infrastructure
+
+commonLabels:
+  ownedBY: infra
+
+images:
+- name: gathertown/casper-3
+  newTag: 3bdb171
+
+patchesStrategicMerge:
+- deployment.yaml
+
+
+secretGenerator:
+- files:
+  - secrets/TOKEN
+  name: token
+resources:
+- ../../base/

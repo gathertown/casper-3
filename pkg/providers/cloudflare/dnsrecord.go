@@ -40,7 +40,7 @@ func (d CloudFlareDNS) Sync(nodes []Node) (bool, error) {
 	txtRecords, err := getRecords(context.TODO(), client, cfg.Zone, recordType)
 	if err != nil {
 		msg := fmt.Sprintf("%v", err)
-		logger.Info("Error occured while fetching records", "provider", cfg.Provider, "zone", cfg.Zone, "error", msg)
+		logger.Info("Error occured while fetching records", "provider", cfg.Provider, "zone", cfg.Zone, "error", msg, "host", cfg.Subdomain)
 		return false, err
 	}
 
