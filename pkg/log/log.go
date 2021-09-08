@@ -34,17 +34,11 @@ func New(out io.Writer, env string) *Logger {
 	var log = logrus.New()
 	log.SetOutput(out)
 
+	// 	log.Formatter = &logrus.JSONFormatter{}
 	log.Formatter = &logrus.TextFormatter{}
-	if env != "prod" {
+	if env == "development" {
 		log.SetLevel(logrus.DebugLevel)
 	}
-
-	// if env == "production" {
-	// 	log.Formatter = &logrus.JSONFormatter{}
-	// } else {
-	// 	log.Formatter = &logrus.TextFormatter{}
-	// 	log.SetLevel(logrus.DebugLevel)
-	// }
 
 	// Add aditional fields here
 	log.WithFields(logrus.Fields{})
