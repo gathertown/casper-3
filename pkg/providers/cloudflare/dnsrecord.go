@@ -40,14 +40,15 @@ func (d CloudFlareDNS) Sync(nodes []Node) (bool, error) {
 	txtRecords, err := getRecords(context.TODO(), client, cfg.Zone, recordType)
 	if err != nil {
 		msg := fmt.Sprintf("%v", err)
-		logger.Info("Error occured while fetching records", "provider", cfg.Provider, "zone", cfg.Zone, "error", msg, "host", cfg.Subdomain)
+		logger.Info("Error occured while fetching records", "provider", cfg.Provider, "zone", cfg.Zone, "error", msg)
 		return false, err
 	}
 
 	// Generate arrays
 	for _, record := range txtRecords {
 		if record.Content == label {
-			cName := strings.Split(record.Name, ".") // e.g. convert "sfu-v81hha.dev" to "sfu-v81hha" to allow comparison with hostnames
+			// convert "sfu-v81hha.dev" to "sfu-v81hha" to allow comparison with hostnames
+			cName := strings.Split(record.Name, ".")
 			dnsRecords = append(dnsRecords, cName[0])
 		}
 	}
@@ -75,7 +76,7 @@ func (d CloudFlareDNS) Sync(nodes []Node) (bool, error) {
 			if addressIPv4 == "" {
 				logger.Info("IP address not found for entry", "name", name, "zone", cfg.Zone)
 			} else {
-				_, err := addRecord(context.TODO(), client, cfg.Zone, name, addressIPv4, cfg.Env)
+				_, err := addRecord(context.TODO(), client, cfg.Zone, cfg.Subdomain, name, addressIPv4, cfg.Env)
 				if err != nil {
 					return false, err
 				}
@@ -155,7 +156,12 @@ func deleteRecord(ctx context.Context, client *cloudflare.API, zone string, fqdn
 	return true, nil
 }
 
-func addRecord(ctx context.Context, client *cloudflare.API, zone string, name string, addressIPv4 string, env string) (bool, error) {
+func addRecord(ctx context.Context, client *cloudflare.API, zone string, subdomain string, name string, addressIPv4 string, env string) (bool, error) {
+	// Construct FQDN by populating 'name' field: sfu-123 vs sfu-123.region-a.env.cloud
+	sName := name
+	if subdomain != "" {
+		sName = fmt.Sprintf("%s.%s", name, subdomain)
+	}
 
 	// Get ZoneID
 	zoneID, err := client.ZoneIDByName(zone)
@@ -165,31 +171,31 @@ func addRecord(ctx context.Context, client *cloudflare.API, zone string, name st
 
 	txtRecordRequest := cloudflare.DNSRecord{
 		Type:    "TXT",
-		Name:    name,
+		Name:    sName,
 		Content: label,
 		TTL:     1800,
 	}
 
-	logger.Info("trying to add record", "zone", zone, "name", name, "type", "TXT")
+	logger.Info("trying to add record", "zone", zone, "name", sName, "type", "TXT")
 	txtRecord, err := client.CreateDNSRecord(ctx, zoneID, txtRecordRequest)
 	if err != nil {
 		return false, err
 	}
-	logger.Info("Added DNS record", "zone", zone, "name", name, "type", "TXT", "success", txtRecord.Success)
+	logger.Info("Added DNS record", "zone", zone, "name", sName, "type", "TXT", "success", txtRecord.Success)
 
 	aRecordRequest := cloudflare.DNSRecord{
 		Type:    "A",
-		Name:    name,
+		Name:    sName,
 		Content: addressIPv4,
 		TTL:     1800,
 	}
 
-	logger.Info("trying to add record", "zone", zone, "name", name, "type", "A")
+	logger.Info("trying to add record", "zone", zone, "name", sName, "type", "A")
 	aRecord, err := client.CreateDNSRecord(ctx, zoneID, aRecordRequest)
 	if err != nil {
 		return false, err
 	}
-	logger.Info("Added record", "zone", zone, "name", name, "type", "A", "success", aRecord.Success)
+	logger.Info("Added record", "zone", zone, "name", sName, "type", "A", "success", aRecord.Success)
 
 	return true, err
 }
