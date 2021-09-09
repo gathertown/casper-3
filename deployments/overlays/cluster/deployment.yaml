@@ -13,16 +13,10 @@ spec:
                 name: token
           env:
             - name: ENV
-              value: development
+              value: ${ENV}
             - name: PROVIDER
-              value: cloudflare
+              value: ${PROVIDER}
             - name: SUBDOMAIN
-              value: ""
+              value: ${SUBDOMAIN}
             - name: ZONE
-              value: gather.town
-            - name: INTERVAL
-              value: "60"
-            - name: LABEL_KEY
-              value: doks.digitalocean.com/node-pool
-            - name: LABEL_VALUE
-              value: sfu
+              value: ${ZONE}
