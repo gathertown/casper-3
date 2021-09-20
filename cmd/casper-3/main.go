@@ -31,7 +31,7 @@ func main() {
 		logger.Info(msg)
 		return
 	}
-	logger.Info("Launching casper-3", "labelKey", cfg.LabelKey, "labelValue", cfg.LabelValue, "interval", cfg.ScanIntervalSeconds, "environment", cfg.Env, "TXT identifier", fmt.Sprintf("heritage=casper-3,environment=%s", cfg.Env))
+	logger.Info("Launching casper-3", "labelKey", cfg.LabelKey, "labelValues", cfg.LabelValues, "interval", cfg.ScanIntervalSeconds, "environment", cfg.Env, "TXT identifier", fmt.Sprintf("heritage=casper-3,environment=%s", cfg.Env))
 
 	// Run loop based on interval. Check if there are unlabelled instances.
 	// If there are unlabelled instances, add label. If not, skip.
