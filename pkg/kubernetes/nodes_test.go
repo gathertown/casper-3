@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"os"
 	"sort"
 	"testing"
 
@@ -20,17 +21,33 @@ var nodeOpts = []struct {
 	labelKey    string
 	labelValue  string
 }{
-	{"127.0.0.1", "10.0.0.1", "1.1.1.1", "test", "sfu-8mh0d", config.FromEnv().LabelKey, config.FromEnv().LabelValue},
-	{"127.0.0.1", "10.0.0.2", "1.1.1.2", "test", "sfu-8quob", config.FromEnv().LabelKey, config.FromEnv().LabelValue},
+	{"127.0.0.1", "10.0.0.1", "1.1.1.1", "test", "sfu-8mh0d", config.FromEnv().LabelKey, "sfu"},
+	{"127.0.0.1", "10.0.0.2", "1.1.1.2", "test", "sfu-8quob", config.FromEnv().LabelKey, "sfu"},
 	{"127.0.0.1", "10.0.0.3", "1.1.1.3", "test", "default-8quob", "k8s.label.key/gather", "false"},
 	{"127.0.0.1", "10.0.0.4", "1.1.1.4", "test", "default-8q8gq", "k8s.label.key/gather", "false"},
 	{"127.0.0.1", "10.0.0.5", "1.1.1.5", "test", "default-8ub75", "k8s.label.key/gather", "false"},
 	{"127.0.0.1", "10.0.0.6", "1.1.1.6", "test", "monitoring-835tv", "k8s.label.key/gather", "false"},
+	{"127.0.0.1", "10.0.0.7", "1.1.1.7", "test", "router-4quob", config.FromEnv().LabelKey, "router"},
 }
 
 func contains(s []string, searchterm string) bool {
 	i := sort.SearchStrings(s, searchterm)
 	return i < len(s) && s[i] == searchterm
+}
+
+func setenv(t *testing.T, key, value string) {
+	t.Helper()
+	t.Logf("Setting env %q=%q", key, value)
+	if err := os.Setenv(key, value); err != nil {
+		t.Fatalf("Failed setting env %q as %q: %v", key, value, err)
+	}
+}
+
+func unsetenv(t *testing.T, key string) {
+	t.Helper()
+	if err := os.Unsetenv(key); err != nil {
+		t.Fatalf("Failed unsetting env %q: %v", key, err)
+	}
 }
 
 func setupCluster(t *testing.T) Cluster {
@@ -57,23 +74,26 @@ func setupCluster(t *testing.T) Cluster {
 }
 
 func TestGetNodes(t *testing.T) {
+	setenv(t, "LABEL_VALUES", "sfu,router")
+
 	c := setupCluster(t)
 	cfg := config.FromEnv()
-	nodes := 2
-	n, _ := c.GetNodes(cfg.LabelKey, cfg.LabelValue)
+	nodes := 3
+	n, _ := c.GetNodes(cfg.LabelKey, cfg.LabelValues)
 
 	// test number of nods with label
 	if len(n.Items) != nodes {
 		t.Errorf("Expecting %v nodes, got %v nodes", nodes, len(n.Items))
 	}
 
-	extenralIPList := []string{"1.1.1.1", "1.1.1.2"}
-	sort.Strings(extenralIPList)
+	externalIPList := []string{"1.1.1.1", "1.1.1.2", "1.1.1.7"}
+	sort.Strings(externalIPList)
 
 	// fetch IP addresses of nodes
 	for _, node := range n.Items {
-		if !contains(extenralIPList, node.Status.Addresses[2].Address) {
-			t.Errorf("Expecting one of the following externalIP(s) %v, got %v nodes", extenralIPList, node.Status.Addresses[2].Address)
+		if !contains(externalIPList, node.Status.Addresses[2].Address) {
+			t.Errorf("Expecting one of the following externalIP(s) %v, got %v nodes", externalIPList, node.Status.Addresses[2].Address)
 		}
 	}
+	unsetenv(t, "LABEL_VALUES")
 }

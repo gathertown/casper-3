@@ -21,7 +21,7 @@ var logger = log.New(os.Stdout, cfg.Env)
 func (c *Cluster) Nodes() ([]Node, error) {
 	var nodes []Node
 
-	n, err := c.GetNodes(cfg.LabelKey, cfg.LabelValue)
+	n, err := c.GetNodes(cfg.LabelKey, cfg.LabelValues)
 	if err != nil {
 		return nil, err
 	}
@@ -34,8 +34,8 @@ func (c *Cluster) Nodes() ([]Node, error) {
 }
 
 // GetNodes returns the list of cluster nodes
-func (c *Cluster) GetNodes(labelKey string, labelValue string) (*v1.NodeList, error) {
-	labelSelector := fmt.Sprintf("%s=%s", labelKey, labelValue)
+func (c *Cluster) GetNodes(labelKey string, labelValues string) (*v1.NodeList, error) {
+	labelSelector := fmt.Sprintf("%s in (%s)", labelKey, labelValues)
 	opts := metav1.ListOptions{
 		LabelSelector: labelSelector,
 		Limit:         300,

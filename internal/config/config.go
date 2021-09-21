@@ -9,7 +9,7 @@ import (
 const (
 	defaultEnv                 = "development"
 	defaultLabelKey            = "doks.digitalocean.com/node-pool"
-	defaultLabelValue          = "sfu"
+	defaultLabelValues         = "sfu"
 	defaultProvider            = "digitalocean"
 	defaultScanIntervalSeconds = "60"
 	defaultToken               = "abcd123"
@@ -22,7 +22,7 @@ const (
 type Config struct {
 	Env                 string
 	LabelKey            string
-	LabelValue          string
+	LabelValues         string
 	Provider            string
 	ScanIntervalSeconds string
 	Token               string
@@ -37,7 +37,7 @@ func FromEnv() *Config {
 		env                 = getenv("ENV", defaultEnv)
 		scanIntervalSeconds = getenv("INTERVAL", defaultScanIntervalSeconds)
 		labelKey            = getenv("LABEL_KEY", defaultLabelKey)
-		labelValue          = getenv("LABEL_VALUE", defaultLabelValue)
+		labelValues         = getenv("LABEL_VALUES", defaultLabelValues)
 		provider            = getenv("PROVIDER", defaultProvider)
 		token               = getenv("TOKEN", defaultToken)
 		subdomain           = getenv("SUBDOMAIN", defaultSubdomain)
@@ -48,7 +48,7 @@ func FromEnv() *Config {
 		Env:                 env,
 		ScanIntervalSeconds: scanIntervalSeconds,
 		LabelKey:            labelKey,
-		LabelValue:          labelValue,
+		LabelValues:         labelValues,
 		Provider:            provider,
 		Token:               token,
 		Subdomain:           subdomain,

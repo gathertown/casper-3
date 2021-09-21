@@ -23,8 +23,8 @@ spec:
               value: "60"
             - name: LABEL_KEY
               value: doks.digitalocean.com/node-pool
-            - name: LABEL_VALUE
-              value: sfu
+            - name: LABEL_VALUES
+              value: "sfu, router"
       imagePullSecrets:
         - name: priv-docker-registry
       nodeSelector:

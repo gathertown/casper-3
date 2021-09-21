@@ -25,7 +25,7 @@ func TestFromEnv(t *testing.T) {
 	setenv(t, "INTERVAL", "61")
 	setenv(t, "PROVIDER", "digitalocean")
 	setenv(t, "LABEL_KEY", "doks.digitalocean.com/node-pool")
-	setenv(t, "LABEL_VALUE", "sfu")
+	setenv(t, "LABEL_VALUES", "sfu")
 	setenv(t, "TOKEN", "abcd1231")
 	setenv(t, "SUBDOMAIN", "dev")
 	setenv(t, "ZONE", "k8s.gather.town")
@@ -44,8 +44,8 @@ func TestFromEnv(t *testing.T) {
 		t.Errorf("FromEnv() 'LABEL_KEY' = %q; want %q", got, want)
 	}
 
-	if got, want := cfg.LabelValue, "sfu"; got != want {
-		t.Errorf("FromEnv() 'LABEL_VALUE' = %q; want %q", got, want)
+	if got, want := cfg.LabelValues, "sfu"; got != want {
+		t.Errorf("FromEnv() 'LABEL_VALUES' = %q; want %q", got, want)
 	}
 
 	if got, want := cfg.Provider, "digitalocean"; got != want {
@@ -68,7 +68,7 @@ func TestFromEnv(t *testing.T) {
 	unsetenv(t, "INTERVAL")
 	unsetenv(t, "PROVIDER")
 	unsetenv(t, "LABEL_KEY")
-	unsetenv(t, "LABEL_VALUE")
+	unsetenv(t, "LABEL_VALUES")
 	unsetenv(t, "TOKEN")
 	unsetenv(t, "SUBDOMAIN")
 	unsetenv(t, "ZONE")
