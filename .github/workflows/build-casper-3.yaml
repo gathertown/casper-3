@@ -1,0 +1,23 @@
+name: casper-3 Tests check
+
+on: [pull_request]
+
+jobs:
+  casper-3-build-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go: [ '1.15.7' ]
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-go@v2
+        with:
+          go-version:  ${{ matrix.go }}
+      - name: Build check
+        run: |
+          make build
+      - name: Tests check
+        run: |
+          make test
