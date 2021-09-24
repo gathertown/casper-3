@@ -225,6 +225,20 @@ workflows:
               only:
                 - main
       - deploy:
+          name: production-do-fra1-b
+          requires:
+            - build-and-push
+          token: TF_VAR_cf_token
+          environment: production-do-fra1-b
+          cluster: $K8S_PROD_FRA1_B
+          provider: cloudflare
+          subdomain: fra1-b.prod.do
+          zone: gather.town
+          filters:
+            branches:
+              only:
+                - main
+      - deploy:
           name: production-do-sgp1-a
           requires:
             - build-and-push
@@ -233,6 +247,20 @@ workflows:
           cluster: $K8S_PROD_SGP1_A
           provider: cloudflare
           subdomain: sgp1-a.prod.do
+          zone: gather.town
+          filters:
+            branches:
+              only:
+                - main
+      - deploy:
+          name: production-do-sgp1-b
+          requires:
+            - build-and-push
+          token: TF_VAR_cf_token
+          environment: production-do-sgp1-b
+          cluster: $K8S_PROD_SGP1_B
+          provider: cloudflare
+          subdomain: sgp1-b.prod.do
           zone: gather.town
           filters:
             branches:
@@ -261,6 +289,21 @@ workflows:
           cluster: $K8S_PROD_NYC3_A
           provider: cloudflare
           subdomain: nyc3-a.prod.do
+          zone: gather.town
+          filters:
+            branches:
+              only:
+                - main
+
+      - deploy:
+          name: production-do-nyc3-b
+          requires:
+            - build-and-push
+          token: TF_VAR_cf_token
+          environment: production-do-nyc3-b
+          cluster: $K8S_PROD_NYC3_B
+          provider: cloudflare
+          subdomain: nyc3-b.prod.do
           zone: gather.town
           filters:
             branches:
