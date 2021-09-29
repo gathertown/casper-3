@@ -30,13 +30,13 @@ type Logger struct {
 
 // New creates a new structured logger. When develop is true, it provides the
 // output in logfmt format. Otherwise the output is JSON.
-func New(out io.Writer, env string) *Logger {
+func New(out io.Writer, level string) *Logger {
 	var log = logrus.New()
 	log.SetOutput(out)
 
 	// 	log.Formatter = &logrus.JSONFormatter{}
 	log.Formatter = &logrus.TextFormatter{}
-	if env == "development" {
+	if level == "debug" {
 		log.SetLevel(logrus.DebugLevel)
 	}
 

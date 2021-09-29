@@ -10,7 +10,7 @@ import (
 
 func TestNew(t *testing.T) {
 	var buf bytes.Buffer
-	logger := New(&buf, "development")
+	logger := New(&buf, "debug")
 
 	logger.Debug("foo")
 	if got, want := buf.String(), "level=debug msg=foo"; !strings.Contains(got, want) {

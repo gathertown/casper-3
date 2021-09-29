@@ -13,7 +13,7 @@ import (
 )
 
 var cfg = config.FromEnv()
-var logger = log.New(os.Stdout, cfg.Env)
+var logger = log.New(os.Stdout, cfg.LogLevel)
 var label = fmt.Sprintf("heritage=casper-3,environment=%s", cfg.Env)
 
 type Node = common.Node
