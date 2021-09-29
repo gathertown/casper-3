@@ -17,7 +17,7 @@ type Node = common.Node
 var cfg = config.FromEnv()
 var logger = log.New(os.Stdout, cfg.Env)
 
-// GetNodes returns the list of cluster nodes
+// Returns []Node struct listing hostname and IPv4 address
 func (c *Cluster) Nodes() ([]Node, error) {
 	var nodes []Node
 
@@ -27,7 +27,12 @@ func (c *Cluster) Nodes() ([]Node, error) {
 	}
 
 	for _, node := range n.Items {
-		nodes = append(nodes, Node{node.Name, node.Status.Addresses[2].Address})
+		if len(node.Status.Addresses) < 3 {
+			logger.Info("No IPv4 address found", "node", node.Name)
+		} else {
+			logger.Debug("IPv4 address found", "node", node.Name)
+			nodes = append(nodes, Node{node.Name, node.Status.Addresses[2].Address})
+		}
 	}
 
 	return nodes, nil

@@ -73,6 +73,28 @@ func setupCluster(t *testing.T) Cluster {
 	return c
 }
 
+func setupClusterNoIPv4(t *testing.T) Cluster {
+	t.Helper()
+	c := Cluster{Client: f.NewSimpleClientset()}
+	opts := metav1.CreateOptions{}
+	for _, tt := range nodeOpts {
+		labels := map[string]string{
+			tt.labelKey: tt.labelValue,
+		}
+		nodeStatus := v1.NodeStatus{
+			Addresses: []v1.NodeAddress{
+				{Type: v1.NodeHostName, Address: tt.localIP},
+				{Type: v1.NodeInternalIP, Address: tt.internalIP},
+			},
+		}
+
+		node := &v1.Node{ObjectMeta: metav1.ObjectMeta{Name: tt.nodeName, ClusterName: tt.clusterName, Labels: labels}, Status: nodeStatus}
+		_, _ = c.Client.CoreV1().Nodes().Create(context.TODO(), node, opts)
+
+	}
+	return c
+}
+
 func TestGetNodes(t *testing.T) {
 	setenv(t, "LABEL_VALUES", "sfu,router")
 
@@ -81,7 +103,7 @@ func TestGetNodes(t *testing.T) {
 	nodes := 3
 	n, _ := c.GetNodes(cfg.LabelKey, cfg.LabelValues)
 
-	// test number of nods with label
+	// test number of nodes with label
 	if len(n.Items) != nodes {
 		t.Errorf("Expecting %v nodes, got %v nodes", nodes, len(n.Items))
 	}
@@ -94,6 +116,16 @@ func TestGetNodes(t *testing.T) {
 		if !contains(externalIPList, node.Status.Addresses[2].Address) {
 			t.Errorf("Expecting one of the following externalIP(s) %v, got %v nodes", externalIPList, node.Status.Addresses[2].Address)
 		}
+	}
+	unsetenv(t, "LABEL_VALUES")
+}
+
+func TestNoIPv4(t *testing.T) {
+	setenv(t, "LABEL_VALUES", "sfu")
+	c := setupClusterNoIPv4(t)
+	p, _ := c.Nodes()
+	if len(p) > 0 {
+		t.Errorf("Found node with IPv4 address!")
 	}
 	unsetenv(t, "LABEL_VALUES")
 }
