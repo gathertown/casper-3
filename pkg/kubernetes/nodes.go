@@ -51,3 +51,12 @@ func (c *Cluster) GetNodes(labelKey string, labelValues string) (*v1.NodeList, e
 	}
 	return n, nil
 }
+
+func (c *Cluster) getExternalIpByNodeName(nodeName string) (string, error) {
+	n, err := c.Client.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
+	if err != nil {
+		return "", err
+	}
+	ip := n.Status.Addresses[2].Address
+	return ip, nil
+}

@@ -16,6 +16,9 @@ const (
 	defaultZone                = "k8s.gather.town"
 	defaultSubdomain           = ""     // effective only for DigitalOcean provider
 	defaultLogLevel            = "info" // use to "debug" for debug level, everything else is INFO
+	defaultAllowSyncPods       = "false"
+	defaultSyncPodLabelKey     = "casper-3.gather.town/sync"
+	defaultSyncPodLabelValue   = "true"
 )
 
 // Config contains service information that can be changed from the
@@ -30,6 +33,9 @@ type Config struct {
 	Zone                string
 	Subdomain           string
 	LogLevel            string
+	AllowSyncPods       string
+	SyncPodLabelKey     string
+	SyncPodLabelValue   string
 }
 
 // FromEnv returns the service configuration from the environment variables.
@@ -45,6 +51,9 @@ func FromEnv() *Config {
 		subdomain           = getenv("SUBDOMAIN", defaultSubdomain)
 		zone                = getenv("ZONE", defaultZone)
 		logLevel            = getenv("LOGLEVEL", defaultLogLevel)
+		allowSyncPods       = getenv("ALLOW_SYNC_PODS", defaultAllowSyncPods)
+		syncPodLabelKey     = getenv("SYNC_POD_LABEL_KEY", defaultSyncPodLabelKey)
+		syncPodLabelValue   = getenv("SYNC_POD_LABEL_VALUE", defaultSyncPodLabelValue)
 	)
 
 	c := &Config{
@@ -57,6 +66,9 @@ func FromEnv() *Config {
 		Subdomain:           subdomain,
 		Zone:                zone,
 		LogLevel:            logLevel,
+		AllowSyncPods:       allowSyncPods,
+		SyncPodLabelKey:     syncPodLabelKey,
+		SyncPodLabelValue:   syncPodLabelValue,
 	}
 	return c
 }

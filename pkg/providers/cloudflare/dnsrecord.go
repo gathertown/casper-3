@@ -17,6 +17,7 @@ var logger = log.New(os.Stdout, cfg.LogLevel)
 var label = fmt.Sprintf("heritage=casper-3,environment=%s", cfg.Env)
 
 type Node = common.Node
+type Pod = common.Pod
 type CloudFlareDNS struct{}
 
 func NewCFClient() *cloudflare.API {
@@ -77,7 +78,7 @@ func (d CloudFlareDNS) Sync(nodes []Node) {
 			if addressIPv4 == "" {
 				logger.Info("IP address not found for entry", "name", name, "zone", cfg.Zone)
 			} else {
-				_, err := addRecord(context.TODO(), client, cfg.Zone, cfg.Subdomain, name, addressIPv4, cfg.Env)
+				_, err := addRecord(context.TODO(), client, cfg.Zone, cfg.Subdomain, name, addressIPv4, "", "", cfg.Env)
 				if err != nil {
 					logger.Info(err.Error())
 				}
@@ -86,7 +87,7 @@ func (d CloudFlareDNS) Sync(nodes []Node) {
 	}
 
 	// Remove stale entries
-	deleteEntries := compare(dnsRecords, nodeHostnames)
+	deleteEntries := common.Compare(dnsRecords, nodeHostnames)
 	if len(deleteEntries) > 0 {
 		logger.Info("Entries to be deleted", "entries", deleteEntries)
 		for _, name := range deleteEntries {
@@ -104,6 +105,126 @@ func (d CloudFlareDNS) Sync(nodes []Node) {
 	}
 
 	// Find kubernetes nodes to register
+	return
+}
+
+func (c CloudFlareDNS) SyncPods(pods []Pod) {
+	var names, dnsRecords []string
+	var txtRecordsFromPods []cloudflare.DNSRecord
+
+	// Setup the client
+	client := NewCFClient()
+
+	// The source of truth are the TXT records as they are created and deleted alongside 'A' records.
+	// The logical flow is the following:
+	// fetch txtRecords that have been created from a pod-sync operation --> indicator for this, is the existence of the `pod-sync=true` string on the txt data.
+	// save pod names that have the `casper-3.gather.town/sync: "true"` label.
+	// compare pod names with cNames --> if diff, then create dns records.
+	// compare cNames with pod names --> if diff, then delete the stale resources.
+	// compare pod names with existing txt records that have been created from a pod-sync operation --> if cname is equal to pod name, but the txtLabel has different assignedNode in comparison with the current pod assignedNode, then delete the outdated records and recreate them with proper configuration
+
+	recordType := "TXT"
+
+	// Fetch all TXT DNS
+	txtRecords, err := getRecords(context.TODO(), client, cfg.Zone, recordType)
+	if err != nil {
+		logger.Info("Error occured while fetching records", "provider", cfg.Provider, "zone", cfg.Zone, "host", cfg.Subdomain)
+		logger.Info(err.Error())
+		return
+	}
+
+	// Generate arrays
+	for _, txtRecord := range txtRecords {
+		recordData := fmt.Sprintf("%v", txtRecord.Data) // convert interface{} to string
+
+		if strings.Contains(recordData, "pod-sync=true") { // save only the txtRecords that have been created from a pod-sync operation
+			cName := strings.Split(txtRecord.Name, ".")
+			dnsRecords = append(dnsRecords, cName[0])
+			txtRecordsFromPods = append(txtRecordsFromPods, txtRecord)
+		}
+	}
+
+	for _, pod := range pods {
+		names = append(names, pod.Name)
+	}
+	logger.Debug("Pods found", "pods", names)
+
+	// Find new entries
+	addEntries := common.Compare(names, dnsRecords)
+	logger.Info("Entries to be added", "entries", addEntries)
+	if len(addEntries) > 0 {
+		for _, name := range addEntries {
+			podName := ""
+			assignedNode := ""
+			addressIPv4 := ""
+
+			for _, pod := range pods {
+				if pod.Name == name {
+					podName = pod.Name
+					assignedNode = pod.AssignedNode.Name
+					addressIPv4 = pod.AssignedNode.ExternalIP
+				}
+			}
+
+			if addressIPv4 == "" {
+				logger.Info("IP address not found for entry", "name", name, "zone", cfg.Zone, "subdomain", cfg.Subdomain)
+			} else {
+				txtLabel := fmt.Sprintf("heritage=casper-3,pod-sync=true,environment=%s,podName=%s,assignedNode=%s,addressIPv4=%s", cfg.Env, podName, assignedNode, addressIPv4)
+				txtRecordName := podName
+				_, err := addRecord(context.TODO(), client, cfg.Zone, podName, cfg.Subdomain, addressIPv4, txtRecordName, txtLabel, cfg.Env)
+				if err != nil {
+					logger.Info(err.Error())
+				}
+			}
+		}
+	}
+
+	// Remove stale entries
+	deleteEntries := common.Compare(dnsRecords, names)
+	if len(deleteEntries) > 0 {
+		for _, name := range deleteEntries {
+			// The 'Name' entry is the FQDN
+			cName := fmt.Sprintf("%s.%s", name, cfg.Zone)
+			if cfg.Subdomain != "" {
+				cName = fmt.Sprintf("%s.%s.%s", name, cfg.Subdomain, cfg.Zone)
+			}
+			logger.Debug("Launching deletion", "record", cName)
+			_, err := deleteRecord(context.TODO(), client, cfg.Zone, cName)
+			if err != nil {
+				logger.Info(err.Error())
+			}
+		}
+	}
+
+	// Detect if an already registered pod has been rescheduled on a different node and update records accordingly
+	for _, pod := range pods {
+		podName := pod.Name
+		assignedNode := pod.AssignedNode.Name
+		addressIPv4 := pod.AssignedNode.ExternalIP
+		txtLabel := fmt.Sprintf("heritage=casper-3,pod-sync=true,environment=%s,podName=%s,assignedNode=%s,addressIPv4=%s", cfg.Env, podName, assignedNode, addressIPv4)
+		for _, txt := range txtRecordsFromPods {
+			cName := strings.Split(txt.Name, ".")
+			txtData := fmt.Sprintf("%v", txt.Data) // convert interface{} to string
+			if cName[0] == podName && !strings.Contains(txtData, assignedNode) {
+				// then delete existing record and recreate new ones
+				logger.Debug("Found a pod with that might got rescheduled on a different node", podName)
+				cName := fmt.Sprintf("%s.%s", podName, cfg.Zone)
+				if cfg.Subdomain != "" {
+					cName = fmt.Sprintf("%s.%s.%s", podName, cfg.Subdomain, cfg.Zone)
+				}
+				logger.Debug("Launching deletion", "record", cName)
+				_, err := deleteRecord(context.TODO(), client, cfg.Zone, cName)
+				if err != nil {
+					logger.Info(err.Error())
+				}
+				_, _err := addRecord(context.TODO(), client, cfg.Zone, podName, cfg.Subdomain, addressIPv4, podName, txtLabel, cfg.Env)
+				if _err != nil {
+					logger.Info(err.Error())
+				}
+			}
+		}
+	}
+	// Find kubernetes pods to register
 	return
 }
 
@@ -160,11 +281,21 @@ func deleteRecord(ctx context.Context, client *cloudflare.API, zone string, fqdn
 	return true, nil
 }
 
-func addRecord(ctx context.Context, client *cloudflare.API, zone string, subdomain string, name string, addressIPv4 string, env string) (bool, error) {
+func addRecord(ctx context.Context, client *cloudflare.API, zone string, subdomain string, name string, addressIPv4 string, txtRecordName string, txtLabel string, env string) (bool, error) {
 	// Construct FQDN by populating 'name' field: sfu-123 vs sfu-123.region-a.env.cloud
 	sName := name
+
+	if txtRecordName == "" {
+		txtRecordName = name
+	}
+
+	if txtLabel == "" {
+		txtLabel = label
+	}
+
 	if subdomain != "" {
 		sName = fmt.Sprintf("%s.%s", name, subdomain)
+		txtRecordName = fmt.Sprintf("%s.%s", txtRecordName, subdomain)
 	}
 
 	// Get ZoneID
@@ -175,12 +306,12 @@ func addRecord(ctx context.Context, client *cloudflare.API, zone string, subdoma
 
 	txtRecordRequest := cloudflare.DNSRecord{
 		Type:    "TXT",
-		Name:    sName,
-		Content: label,
+		Name:    txtRecordName,
+		Content: txtLabel,
 		TTL:     1800,
 	}
 
-	logger.Info("trying to add record", "zone", zone, "name", sName, "type", "TXT")
+	logger.Info("trying to add record", "zone", zone, "name", txtRecordName, "type", "TXT")
 	txtRecord, err := client.CreateDNSRecord(ctx, zoneID, txtRecordRequest)
 	if err != nil {
 		return false, err
@@ -202,24 +333,4 @@ func addRecord(ctx context.Context, client *cloudflare.API, zone string, subdoma
 	logger.Info("Added record", "zone", zone, "name", sName, "type", "A", "success", aRecord.Success)
 
 	return true, err
-}
-
-// Compare slices: https://stackoverflow.com/a/45428032/577133
-// Returns []string of elements found in 'a' but not in 'b'.
-func compare(a, b []string) []string {
-	mb := make(map[string]struct{}, len(b))
-
-	for _, x := range b {
-		mb[x] = struct{}{}
-	}
-
-	var diff []string
-
-	for _, x := range a {
-		if _, found := mb[x]; !found {
-			diff = append(diff, x)
-		}
-	}
-
-	return diff
 }

@@ -17,6 +17,7 @@ var logger = log.New(os.Stdout, cfg.LogLevel)
 var label = fmt.Sprintf("heritage=casper-3,environment=%s", cfg.Env)
 
 type Node = common.Node
+type Pod = common.Pod
 type DigitalOceanDNS struct{}
 
 func NewDOClient() *godo.Client {
@@ -70,7 +71,7 @@ func (d DigitalOceanDNS) Sync(nodes []Node) {
 			if addressIPv4 == "" {
 				logger.Info("IP address not found for entry", "name", name, "zone", cfg.Zone, "subdomain", cfg.Subdomain)
 			} else {
-				_, err := addRecord(context.TODO(), client, cfg.Zone, name, cfg.Subdomain, addressIPv4, cfg.Env)
+				_, err := addRecord(context.TODO(), client, cfg.Zone, name, cfg.Subdomain, addressIPv4, "", "", cfg.Env)
 				if err != nil {
 					logger.Info(err.Error())
 				}
@@ -93,6 +94,124 @@ func (d DigitalOceanDNS) Sync(nodes []Node) {
 	}
 
 	// Find kubernetes nodes to register
+	return
+}
+
+func (c DigitalOceanDNS) SyncPods(pods []Pod) {
+	var names, dnsRecords []string
+	var txtRecordsFromPods []godo.DomainRecord
+
+	// Setup the client
+	client := NewDOClient()
+
+	// The source of truth are the TXT records as they are created and deleted alongside 'A' records.
+	// The logical flow is the following:
+	// fetch txtRecords that have been created from a pod-sync operation --> indicator for this, is the existence of the `pod-sync=true` string on the txt data.
+	// save pod names that have the `casper-3.gather.town/sync: "true"` label.
+	// compare pod names with cNames --> if diff, then create dns records.
+	// compare cNames with pod names --> if diff, then delete the stale resources.
+	// compare pod names with existing txt records that have been created from a pod-sync operation --> if cname is equal to pod name, but the txtLabel has different assignedNode in comparison with the current pod assignedNode, then delete the outdated records and recreate them with proper configuration
+
+	recordType := "TXT"
+
+	// Fetch all TXT DNS
+	txtRecords, err := getRecords(context.TODO(), client, cfg.Zone, recordType)
+	if err != nil {
+		logger.Info("Error occured while fetching records", "provider", cfg.Provider, "zone", cfg.Zone, "host", cfg.Subdomain)
+		logger.Info(err.Error())
+		return
+	}
+
+	// Generate arrays
+	for _, txtRecord := range txtRecords {
+		if strings.Contains(txtRecord.Data, "pod-sync=true") { // save only the txtRecords that have been created from a pod-sync operation
+			cName := strings.Split(txtRecord.Name, ".")
+			dnsRecords = append(dnsRecords, cName[0])
+			txtRecordsFromPods = append(txtRecordsFromPods, txtRecord)
+		}
+	}
+
+	for _, pod := range pods {
+		names = append(names, pod.Name)
+	}
+
+	logger.Debug("Pods found", "pods", names)
+
+	// Find new entries
+	addEntries := common.Compare(names, dnsRecords)
+	logger.Info("Entries to be added", "entries", addEntries)
+	if len(addEntries) > 0 {
+		for _, name := range addEntries {
+			podName := ""
+			assignedNode := ""
+			addressIPv4 := ""
+
+			for _, pod := range pods {
+				if pod.Name == name {
+					podName = pod.Name
+					assignedNode = pod.AssignedNode.Name
+					addressIPv4 = pod.AssignedNode.ExternalIP
+				}
+			}
+
+			if addressIPv4 == "" {
+				logger.Info("IP address not found for entry", "name", name, "zone", cfg.Zone, "subdomain", cfg.Subdomain)
+			} else {
+				txtLabel := fmt.Sprintf("heritage=casper-3,pod-sync=true,environment=%s,podName=%s,assignedNode=%s,addressIPv4=%s", cfg.Env, podName, assignedNode, addressIPv4)
+				txtRecordName := podName
+				_, err := addRecord(context.TODO(), client, cfg.Zone, podName, cfg.Subdomain, addressIPv4, txtRecordName, txtLabel, cfg.Env)
+				if err != nil {
+					logger.Info(err.Error())
+				}
+			}
+		}
+	}
+
+	// Remove stale entries
+	deleteEntries := common.Compare(dnsRecords, names)
+	if len(deleteEntries) > 0 {
+		for _, name := range deleteEntries {
+			cName := fmt.Sprintf("%s.%s", name, cfg.Zone)
+			if cfg.Subdomain != "" {
+				cName = fmt.Sprintf("%s.%s.%s", name, cfg.Subdomain, cfg.Zone)
+			}
+			logger.Debug("Launching deletion", "record", cName)
+			_, err := deleteRecord(context.TODO(), client, cfg.Zone, cName)
+			if err != nil {
+				logger.Info(err.Error())
+			}
+		}
+	}
+
+	// Detect if an already registered pod has been rescheduled on a different node and update records accordingly
+	for _, pod := range pods {
+		podName := pod.Name
+		assignedNode := pod.AssignedNode.Name
+		addressIPv4 := pod.AssignedNode.ExternalIP
+		txtLabel := fmt.Sprintf("heritage=casper-3,pod-sync=true,environment=%s,podName=%s,assignedNode=%s,addressIPv4=%s", cfg.Env, podName, assignedNode, addressIPv4)
+		for _, txt := range txtRecordsFromPods {
+			cName := strings.Split(txt.Name, ".")
+			if cName[0] == podName && !strings.Contains(txt.Data, assignedNode) {
+				// then delete existing record and recreate new ones
+				logger.Debug("Found a pod with that might got rescheduled on a different node", podName)
+				cName := fmt.Sprintf("%s.%s", podName, cfg.Zone)
+				if cfg.Subdomain != "" {
+					cName = fmt.Sprintf("%s.%s.%s", podName, cfg.Subdomain, cfg.Zone)
+				}
+				logger.Debug("Launching deletion", "record", cName)
+				_, err := deleteRecord(context.TODO(), client, cfg.Zone, cName)
+				if err != nil {
+					logger.Info(err.Error())
+				}
+				_, _err := addRecord(context.TODO(), client, cfg.Zone, podName, cfg.Subdomain, addressIPv4, podName, txtLabel, cfg.Env)
+				if _err != nil {
+					logger.Info(err.Error())
+				}
+			}
+		}
+	}
+
+	// Find kubernetes pods to register
 	return
 }
 
@@ -139,7 +258,15 @@ func deleteRecord(ctx context.Context, client *godo.Client, zone string, name st
 	return true, nil
 }
 
-func addRecord(ctx context.Context, client *godo.Client, zone string, name string, sub string, addressIPv4 string, env string) (bool, error) {
+func addRecord(ctx context.Context, client *godo.Client, zone string, name string, sub string, addressIPv4 string, txtRecordName string, txtLabel string, env string) (bool, error) {
+	if txtRecordName == "" {
+		txtRecordName = name
+	}
+
+	if txtLabel == "" {
+		txtLabel = label
+	}
+
 	aRecordRequest := &godo.DomainRecordEditRequest{
 		Type: "A",
 		Name: fmt.Sprintf("%s.%s", name, sub), // Workaround for subdomains to work properly on digital ocean.
@@ -149,8 +276,8 @@ func addRecord(ctx context.Context, client *godo.Client, zone string, name strin
 
 	txtRecordRequest := &godo.DomainRecordEditRequest{
 		Type: "TXT",
-		Name: fmt.Sprintf("%s.%s", name, sub),
-		Data: label,
+		Name: fmt.Sprintf("%s.%s", txtRecordName, sub),
+		Data: txtLabel,
 		TTL:  1800,
 	}
 

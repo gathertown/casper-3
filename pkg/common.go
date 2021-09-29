@@ -6,6 +6,12 @@ type Node struct {
 	ExternalIP string
 }
 
+type Pod struct {
+	Name         string
+	AssignedNode Node
+	Labels       map[string]string
+}
+
 // Compare slices: https://stackoverflow.com/a/45428032/577133
 // Returns []string of elements found in 'a' but not in 'b'.
 func Compare(a, b []string) []string {

@@ -129,3 +129,25 @@ func TestNoIPv4(t *testing.T) {
 	}
 	unsetenv(t, "LABEL_VALUES")
 }
+
+func TestGetExternalIpByNode(t *testing.T) {
+	c := setupCluster(t)
+	cfg := config.FromEnv()
+	nodes := 2
+	n, _ := c.GetNodes(cfg.LabelKey, cfg.LabelValues)
+
+	// test number of nodes with label
+	if len(n.Items) != nodes {
+		t.Errorf("Expecting %v nodes, got %v nodes", nodes, len(n.Items))
+	}
+
+	expectedExternalIPAddressList := []string{"1.1.1.1", "1.1.1.2"}
+
+	// fetch pod names
+	for _, node := range n.Items {
+		actualExternalIPAddress, _ := c.getExternalIpByNodeName(node.Name)
+		if !contains(expectedExternalIPAddressList, actualExternalIPAddress) {
+			t.Errorf("Expecting one of the following IP Addresses(s) %v, got %v IP Address", expectedExternalIPAddressList, actualExternalIPAddress)
+		}
+	}
+}

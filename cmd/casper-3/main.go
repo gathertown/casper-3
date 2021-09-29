@@ -16,8 +16,11 @@ import (
 )
 
 type Node = common.Node
+type Pod = common.Pod
+
 type provider interface {
 	Sync(nodes []Node)
+	SyncPods(pods []Pod)
 }
 
 // run labels nodes if label is missing
@@ -42,6 +45,7 @@ func main() {
 	if cfg.Provider == "cloudflare" {
 		p = cloudflare.CloudFlareDNS{}
 	}
+
 	for {
 		c, err := kubernetes.New()
 		if err != nil {
@@ -57,6 +61,15 @@ func main() {
 
 		p.Sync(n)
 
+		if syncPodsAllowed, _ := strconv.ParseBool(cfg.AllowSyncPods); syncPodsAllowed {
+			pods, err := c.Pods()
+			if err != nil {
+				msg := fmt.Sprintf("%v", err)
+				logger.Info(msg)
+			}
+
+			p.SyncPods(pods)
+		}
 		time.Sleep(time.Duration(interval) * time.Second)
 	}
 }
