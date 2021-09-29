@@ -17,7 +17,7 @@ import (
 
 type Node = common.Node
 type provider interface {
-	Sync(nodes []Node) (bool, error)
+	Sync(nodes []Node)
 }
 
 // run labels nodes if label is missing
@@ -55,11 +55,7 @@ func main() {
 			fmt.Println(err)
 		}
 
-		_, err = p.Sync(n)
-		if err != nil {
-			msg := fmt.Sprintf("%v", err)
-			logger.Info(msg)
-		}
+		p.Sync(n)
 
 		time.Sleep(time.Duration(interval) * time.Second)
 	}
