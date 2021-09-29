@@ -23,7 +23,7 @@ func NewDOClient() *godo.Client {
 	return godo.NewFromToken(cfg.Token)
 }
 
-func (d DigitalOceanDNS) Sync(nodes []Node) (bool, error) {
+func (d DigitalOceanDNS) Sync(nodes []Node) {
 	var nodeHostnames, dnsRecords []string
 
 	// Setup the client
@@ -36,7 +36,8 @@ func (d DigitalOceanDNS) Sync(nodes []Node) (bool, error) {
 	txtRecords, err := getRecords(context.TODO(), client, cfg.Zone, recordType)
 	if err != nil {
 		logger.Info("Error occured while fetching records", "provider", cfg.Provider, "zone", cfg.Zone, "host", cfg.Subdomain)
-		return false, err
+		logger.Info(err.Error())
+		return
 	}
 
 	// Generate arrays
@@ -71,7 +72,7 @@ func (d DigitalOceanDNS) Sync(nodes []Node) (bool, error) {
 			} else {
 				_, err := addRecord(context.TODO(), client, cfg.Zone, name, cfg.Subdomain, addressIPv4, cfg.Env)
 				if err != nil {
-					return false, err
+					logger.Info(err.Error())
 				}
 			}
 		}
@@ -86,13 +87,13 @@ func (d DigitalOceanDNS) Sync(nodes []Node) (bool, error) {
 			logger.Debug("Launching deletion", "record", cName)
 			_, err := deleteRecord(context.TODO(), client, cfg.Zone, cName)
 			if err != nil {
-				return false, err
+				logger.Info(err.Error())
 			}
 		}
 	}
 
 	// Find kubernetes nodes to register
-	return true, nil
+	return
 }
 
 func getRecords(ctx context.Context, client *godo.Client, domain string, recordType string) ([]godo.DomainRecord, error) {

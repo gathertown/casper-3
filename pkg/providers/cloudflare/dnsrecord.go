@@ -27,7 +27,7 @@ func NewCFClient() *cloudflare.API {
 	return api
 }
 
-func (d CloudFlareDNS) Sync(nodes []Node) (bool, error) {
+func (d CloudFlareDNS) Sync(nodes []Node) {
 	var nodeHostnames, dnsRecords []string
 
 	// Setup the client
@@ -41,7 +41,8 @@ func (d CloudFlareDNS) Sync(nodes []Node) (bool, error) {
 	if err != nil {
 		msg := fmt.Sprintf("%v", err)
 		logger.Info("Error occured while fetching records", "provider", cfg.Provider, "zone", cfg.Zone, "error", msg)
-		return false, err
+		logger.Info(err.Error())
+		return
 	}
 
 	// Generate arrays
@@ -78,7 +79,7 @@ func (d CloudFlareDNS) Sync(nodes []Node) (bool, error) {
 			} else {
 				_, err := addRecord(context.TODO(), client, cfg.Zone, cfg.Subdomain, name, addressIPv4, cfg.Env)
 				if err != nil {
-					return false, err
+					logger.Info(err.Error())
 				}
 			}
 		}
@@ -94,13 +95,13 @@ func (d CloudFlareDNS) Sync(nodes []Node) (bool, error) {
 			logger.Debug("Launching deletion", "record", cName)
 			_, err := deleteRecord(context.TODO(), client, cfg.Zone, cName)
 			if err != nil {
-				return false, err
+				logger.Info(err.Error())
 			}
 		}
 	}
 
 	// Find kubernetes nodes to register
-	return true, nil
+	return
 }
 
 func getRecords(ctx context.Context, client *cloudflare.API, zone string, recordType string) ([]cloudflare.DNSRecord, error) {
