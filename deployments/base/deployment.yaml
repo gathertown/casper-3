@@ -25,6 +25,8 @@ spec:
               value: doks.digitalocean.com/node-pool
             - name: LABEL_VALUES
               value: "sfu, router"
+            - name: ALLOW_SYNC_PODS
+              value: "true"
       imagePullSecrets:
         - name: priv-docker-registry
       nodeSelector:

@@ -9,5 +9,7 @@ rules:
       - "*"
     resources:
       - nodes
+      - pods
     verbs:
       - list
+      - get
