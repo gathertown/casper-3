@@ -14,7 +14,8 @@ const (
 	defaultScanIntervalSeconds = "60"
 	defaultToken               = "abcd123"
 	defaultZone                = "k8s.gather.town"
-	defaultSubdomain           = "" // effective only for DigitalOcean provider
+	defaultSubdomain           = ""     // effective only for DigitalOcean provider
+	defaultLogLevel            = "info" // use to "debug" for debug level, everything else is INFO
 )
 
 // Config contains service information that can be changed from the
@@ -28,6 +29,7 @@ type Config struct {
 	Token               string
 	Zone                string
 	Subdomain           string
+	LogLevel            string
 }
 
 // FromEnv returns the service configuration from the environment variables.
@@ -42,6 +44,7 @@ func FromEnv() *Config {
 		token               = getenv("TOKEN", defaultToken)
 		subdomain           = getenv("SUBDOMAIN", defaultSubdomain)
 		zone                = getenv("ZONE", defaultZone)
+		logLevel            = getenv("LOGLEVEL", defaultLogLevel)
 	)
 
 	c := &Config{
@@ -53,6 +56,7 @@ func FromEnv() *Config {
 		Token:               token,
 		Subdomain:           subdomain,
 		Zone:                zone,
+		LogLevel:            logLevel,
 	}
 	return c
 }

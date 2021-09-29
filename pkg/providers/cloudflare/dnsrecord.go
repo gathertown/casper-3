@@ -13,7 +13,7 @@ import (
 )
 
 var cfg = config.FromEnv()
-var logger = log.New(os.Stdout, cfg.Env)
+var logger = log.New(os.Stdout, cfg.LogLevel)
 var label = fmt.Sprintf("heritage=casper-3,environment=%s", cfg.Env)
 
 type Node = common.Node
@@ -92,6 +92,9 @@ func (d CloudFlareDNS) Sync(nodes []Node) {
 		for _, name := range deleteEntries {
 			// The 'Name' entry is the FQDN
 			cName := fmt.Sprintf("%s.%s", name, cfg.Zone)
+			if cfg.Subdomain != "" {
+				cName = fmt.Sprintf("%s.%s.%s", name, cfg.Subdomain, cfg.Zone)
+			}
 			logger.Debug("Launching deletion", "record", cName)
 			_, err := deleteRecord(context.TODO(), client, cfg.Zone, cName)
 			if err != nil {

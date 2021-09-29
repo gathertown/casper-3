@@ -15,7 +15,7 @@ import (
 type Node = common.Node
 
 var cfg = config.FromEnv()
-var logger = log.New(os.Stdout, cfg.Env)
+var logger = log.New(os.Stdout, cfg.LogLevel)
 
 // Returns []Node struct listing hostname and IPv4 address
 func (c *Cluster) Nodes() ([]Node, error) {
