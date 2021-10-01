@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gathertown/casper-3/internal/config"
+	"github.com/gathertown/casper-3/internal/metrics"
 	common "github.com/gathertown/casper-3/pkg"
 	"github.com/gathertown/casper-3/pkg/kubernetes"
 	"github.com/gathertown/casper-3/pkg/log"
@@ -45,6 +46,8 @@ func main() {
 	if cfg.Provider == "cloudflare" {
 		p = cloudflare.CloudFlareDNS{}
 	}
+
+	metrics.Serve()
 
 	for {
 		c, err := kubernetes.New()
