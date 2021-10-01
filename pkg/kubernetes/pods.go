@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gathertown/casper-3/internal/metrics"
 	common "github.com/gathertown/casper-3/pkg"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,6 +24,8 @@ func (c *Cluster) Pods() ([]Pod, error) {
 	for _, pod := range p.Items {
 		externalIp, err := c.getExternalIpByNodeName(pod.Spec.NodeName)
 		if err != nil {
+			msg := fmt.Sprintf("%v", err)
+			metrics.ExecErrInc(msg)
 			return nil, err
 		}
 		podLabels := make(map[string]string)
@@ -42,6 +45,8 @@ func (c *Cluster) GetPods(labelKey string, labelValue string) (*v1.PodList, erro
 	}
 	p, err := c.Client.CoreV1().Pods("").List(context.TODO(), opts)
 	if err != nil {
+		msg := fmt.Sprintf("%v", err)
+		metrics.ExecErrInc(msg)
 		return nil, err
 	}
 	return p, nil

@@ -8,6 +8,7 @@ import (
 
 	cloudflare "github.com/cloudflare/cloudflare-go"
 	"github.com/gathertown/casper-3/internal/config"
+	"github.com/gathertown/casper-3/internal/metrics"
 	common "github.com/gathertown/casper-3/pkg"
 	"github.com/gathertown/casper-3/pkg/log"
 )
@@ -23,7 +24,9 @@ type CloudFlareDNS struct{}
 func NewCFClient() *cloudflare.API {
 	api, err := cloudflare.NewWithAPIToken(cfg.Token)
 	if err != nil {
-		fmt.Println(err)
+		msg := fmt.Sprintf("%v", err)
+		metrics.ExecErrInc(msg)
+		logger.Info("Error while creating client", "provider", cfg.Provider, "zone", cfg.Zone, "error", msg)
 	}
 	return api
 }
@@ -37,10 +40,25 @@ func (d CloudFlareDNS) Sync(nodes []Node) {
 	// The source of truth are the TXT records as they are created and deleted alongside 'A' records.
 	recordType := "TXT"
 
+	// Count all records in the zone. Useful for alerting purposes.
+	// This call is pretty expensive ~50s for 3k records, run in a goroutine.
+	go func() {
+		allRecords, err := getAllRecords(context.TODO(), client, cfg.Zone)
+		if err != nil {
+			msg := fmt.Sprintf("%v", err)
+			metrics.ExecErrInc(msg)
+			logger.Info("Error occured while fetching all records", "provider", cfg.Provider, "zone", cfg.Zone, "error", msg)
+			logger.Info(err.Error())
+			return
+		}
+		metrics.DNSRecordsTotal(cfg.Provider, allRecords)
+	}()
+
 	// Fetch all TXT DNS
 	txtRecords, err := getRecords(context.TODO(), client, cfg.Zone, recordType)
 	if err != nil {
 		msg := fmt.Sprintf("%v", err)
+		metrics.ExecErrInc(msg)
 		logger.Info("Error occured while fetching records", "provider", cfg.Provider, "zone", cfg.Zone, "error", msg)
 		logger.Info(err.Error())
 		return
@@ -80,6 +98,8 @@ func (d CloudFlareDNS) Sync(nodes []Node) {
 			} else {
 				_, err := addRecord(context.TODO(), client, cfg.Zone, cfg.Subdomain, name, addressIPv4, "", "", cfg.Env)
 				if err != nil {
+					msg := fmt.Sprintf("%v", err)
+					metrics.ExecErrInc(msg)
 					logger.Info(err.Error())
 				}
 			}
@@ -99,6 +119,8 @@ func (d CloudFlareDNS) Sync(nodes []Node) {
 			logger.Debug("Launching deletion", "record", cName)
 			_, err := deleteRecord(context.TODO(), client, cfg.Zone, cName)
 			if err != nil {
+				msg := fmt.Sprintf("%v", err)
+				metrics.ExecErrInc(msg)
 				logger.Info(err.Error())
 			}
 		}
@@ -128,6 +150,8 @@ func (c CloudFlareDNS) SyncPods(pods []Pod) {
 	// Fetch all TXT DNS
 	txtRecords, err := getRecords(context.TODO(), client, cfg.Zone, recordType)
 	if err != nil {
+		msg := fmt.Sprintf("%v", err)
+		metrics.ExecErrInc(msg)
 		logger.Info("Error occured while fetching records", "provider", cfg.Provider, "zone", cfg.Zone, "host", cfg.Subdomain)
 		logger.Info(err.Error())
 		return
@@ -173,6 +197,8 @@ func (c CloudFlareDNS) SyncPods(pods []Pod) {
 				txtRecordName := podName
 				_, err := addRecord(context.TODO(), client, cfg.Zone, podName, cfg.Subdomain, addressIPv4, txtRecordName, txtLabel, cfg.Env)
 				if err != nil {
+					msg := fmt.Sprintf("%v", err)
+					metrics.ExecErrInc(msg)
 					logger.Info(err.Error())
 				}
 			}
@@ -191,6 +217,8 @@ func (c CloudFlareDNS) SyncPods(pods []Pod) {
 			logger.Debug("Launching deletion", "record", cName)
 			_, err := deleteRecord(context.TODO(), client, cfg.Zone, cName)
 			if err != nil {
+				msg := fmt.Sprintf("%v", err)
+				metrics.ExecErrInc(msg)
 				logger.Info(err.Error())
 			}
 		}
@@ -215,10 +243,14 @@ func (c CloudFlareDNS) SyncPods(pods []Pod) {
 				logger.Debug("Launching deletion", "record", cName)
 				_, err := deleteRecord(context.TODO(), client, cfg.Zone, cName)
 				if err != nil {
+					msg := fmt.Sprintf("%v", err)
+					metrics.ExecErrInc(msg)
 					logger.Info(err.Error())
 				}
 				_, _err := addRecord(context.TODO(), client, cfg.Zone, podName, cfg.Subdomain, addressIPv4, podName, txtLabel, cfg.Env)
 				if _err != nil {
+					msg := fmt.Sprintf("%v", err)
+					metrics.ExecErrInc(msg)
 					logger.Info(err.Error())
 				}
 			}
@@ -233,6 +265,8 @@ func getRecords(ctx context.Context, client *cloudflare.API, zone string, record
 	// Get ZoneID
 	zoneID, err := client.ZoneIDByName(zone)
 	if err != nil {
+		msg := fmt.Sprintf("%v", err)
+		metrics.ExecErrInc(msg)
 		return nil, err
 	}
 
@@ -241,6 +275,8 @@ func getRecords(ctx context.Context, client *cloudflare.API, zone string, record
 	record := cloudflare.DNSRecord{Type: recordType}
 	records, err := client.DNSRecords(ctx, zoneID, record)
 	if err != nil {
+		msg := fmt.Sprintf("%v", err)
+		metrics.ExecErrInc(msg)
 		return nil, err
 	}
 
@@ -252,6 +288,8 @@ func deleteRecord(ctx context.Context, client *cloudflare.API, zone string, fqdn
 	// Get ZoneID
 	zoneID, err := client.ZoneIDByName(zone)
 	if err != nil {
+		msg := fmt.Sprintf("%v", err)
+		metrics.ExecErrInc(msg)
 		return false, err
 	}
 
@@ -260,12 +298,16 @@ func deleteRecord(ctx context.Context, client *cloudflare.API, zone string, fqdn
 	txtRecord := cloudflare.DNSRecord{Name: fqdn, Type: "TXT"}
 	txtRecords, err := client.DNSRecords(ctx, zoneID, txtRecord)
 	if err != nil {
+		msg := fmt.Sprintf("%v", err)
+		metrics.ExecErrInc(msg)
 		return false, err
 	}
 
 	aRecord := cloudflare.DNSRecord{Name: fqdn, Type: "A"}
 	aRecords, err := client.DNSRecords(ctx, zoneID, aRecord)
 	if err != nil {
+		msg := fmt.Sprintf("%v", err)
+		metrics.ExecErrInc(msg)
 		return false, err
 	}
 
@@ -274,6 +316,8 @@ func deleteRecord(ctx context.Context, client *cloudflare.API, zone string, fqdn
 	for _, record := range records {
 		err := client.DeleteDNSRecord(ctx, zoneID, record.ID)
 		if err != nil {
+			msg := fmt.Sprintf("%v", err)
+			metrics.ExecErrInc(msg)
 			return false, err
 		}
 		logger.Info("Deleted DNS record", "zone", zone, "record", record.Name, "type", record.Type)
@@ -301,6 +345,8 @@ func addRecord(ctx context.Context, client *cloudflare.API, zone string, subdoma
 	// Get ZoneID
 	zoneID, err := client.ZoneIDByName(zone)
 	if err != nil {
+		msg := fmt.Sprintf("%v", err)
+		metrics.ExecErrInc(msg)
 		return false, err
 	}
 
@@ -314,6 +360,8 @@ func addRecord(ctx context.Context, client *cloudflare.API, zone string, subdoma
 	logger.Info("trying to add record", "zone", zone, "name", txtRecordName, "type", "TXT")
 	txtRecord, err := client.CreateDNSRecord(ctx, zoneID, txtRecordRequest)
 	if err != nil {
+		msg := fmt.Sprintf("%v", err)
+		metrics.ExecErrInc(msg)
 		return false, err
 	}
 	logger.Info("Added DNS record", "zone", zone, "name", sName, "type", "TXT", "success", txtRecord.Success)
@@ -328,9 +376,31 @@ func addRecord(ctx context.Context, client *cloudflare.API, zone string, subdoma
 	logger.Info("trying to add record", "zone", zone, "name", sName, "type", "A")
 	aRecord, err := client.CreateDNSRecord(ctx, zoneID, aRecordRequest)
 	if err != nil {
+		msg := fmt.Sprintf("%v", err)
+		metrics.ExecErrInc(msg)
 		return false, err
 	}
 	logger.Info("Added record", "zone", zone, "name", sName, "type", "A", "success", aRecord.Success)
 
 	return true, err
+}
+
+func getAllRecords(ctx context.Context, client *cloudflare.API, zone string) (float64, error) {
+
+	// Get ZoneID
+	zoneID, err := client.ZoneIDByName(zone)
+	if err != nil {
+		msg := fmt.Sprintf("%v", err)
+		metrics.ExecErrInc(msg)
+		return 0.0, err
+	}
+
+	record := cloudflare.DNSRecord{}
+	records, err := client.DNSRecords(ctx, zoneID, record)
+	if err != nil {
+		msg := fmt.Sprintf("%v", err)
+		metrics.ExecErrInc(msg)
+		return 0.0, err
+	}
+	return float64(len(records)), err
 }

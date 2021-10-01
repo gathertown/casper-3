@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gathertown/casper-3/internal/config"
+	"github.com/gathertown/casper-3/internal/metrics"
 	common "github.com/gathertown/casper-3/pkg"
 	"github.com/gathertown/casper-3/pkg/kubernetes"
 	"github.com/gathertown/casper-3/pkg/log"
@@ -34,7 +35,6 @@ func main() {
 		logger.Info(msg)
 		return
 	}
-	logger.Info("Launching casper-3", "labelKey", cfg.LabelKey, "labelValues", cfg.LabelValues, "interval", cfg.ScanIntervalSeconds, "environment", cfg.Env, "TXT identifier", fmt.Sprintf("heritage=casper-3,environment=%s", cfg.Env), "logLevel", cfg.LogLevel)
 
 	// Run loop based on interval. Check if there are unlabelled instances.
 	// If there are unlabelled instances, add label. If not, skip.
@@ -46,6 +46,9 @@ func main() {
 		p = cloudflare.CloudFlareDNS{}
 	}
 
+	go metrics.Serve()
+
+	logger.Info("Launching casper-3", "labelKey", cfg.LabelKey, "labelValues", cfg.LabelValues, "interval", cfg.ScanIntervalSeconds, "environment", cfg.Env, "TXT identifier", fmt.Sprintf("heritage=casper-3,environment=%s", cfg.Env), "logLevel", cfg.LogLevel)
 	for {
 		c, err := kubernetes.New()
 		if err != nil {
