@@ -1,4 +1,4 @@
-FROM golang:1.15.7-alpine3.12 as builder
+FROM golang:1.17.1-alpine3.14 as builder
 RUN apk update && apk add ca-certificates curl git make tzdata
 RUN adduser -u 5003 --gecos '' --disabled-password --no-create-home gather
 COPY . /app
