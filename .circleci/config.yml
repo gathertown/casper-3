@@ -37,6 +37,9 @@ commands:
         default: ""
       zone:
         type: string
+      level:
+        type: string
+        default: "info"
     steps:
       - checkout
       - get-commit-shorthash
@@ -51,6 +54,7 @@ commands:
             - PROVIDER: <<parameters.provider>>
             - SUBDOMAIN: <<parameters.subdomain>>
             - ZONE: <<parameters.zone>>
+            - LOGLEVEL: <<parameters.level>>
           command: |
             mkdir ~/.secrethub
             echo ${SECRETHUB_CREDENTIAL} > ~/.secrethub/credential
@@ -127,6 +131,8 @@ jobs:
         default: ""
       zone:
         type: string
+      level:
+        type: string
     executor: <<parameters.executor>>
     steps:
       - deploy:
@@ -136,6 +142,7 @@ jobs:
           provider: <<parameters.provider>>
           subdomain: <<parameters.subdomain>>
           zone: <<parameters.zone>>
+          level: <<parameters.level>>
 
 workflows:
   build-and-push:
@@ -160,6 +167,7 @@ workflows:
           provider: digitalocean
           subdomain: dev
           zone: k8s.gather.town
+          level: debug
           filters:
             branches:
               only:
@@ -176,6 +184,7 @@ workflows:
           provider: cloudflare
           subdomain: nyc3-a.stg.do
           zone: gather.town
+          level: info
           filters:
             branches:
               only:
@@ -190,6 +199,7 @@ workflows:
           provider: cloudflare
           subdomain: fra1-a.stg.do
           zone: gather.town
+          level: info
           filters:
             branches:
               only:
@@ -206,6 +216,7 @@ workflows:
           provider: cloudflare
           subdomain: blr1-a.prod.do
           zone: gather.town
+          level: info
           filters:
             branches:
               only:
@@ -220,6 +231,7 @@ workflows:
           provider: cloudflare
           subdomain: fra1-a.prod.do
           zone: gather.town
+          level: info
           filters:
             branches:
               only:
@@ -234,6 +246,7 @@ workflows:
           provider: cloudflare
           subdomain: fra1-b.prod.do
           zone: gather.town
+          level: info
           filters:
             branches:
               only:
@@ -248,6 +261,7 @@ workflows:
           provider: cloudflare
           subdomain: sgp1-a.prod.do
           zone: gather.town
+          level: info
           filters:
             branches:
               only:
@@ -262,6 +276,7 @@ workflows:
           provider: cloudflare
           subdomain: sgp1-b.prod.do
           zone: gather.town
+          level: info
           filters:
             branches:
               only:
@@ -276,6 +291,7 @@ workflows:
           provider: cloudflare
           subdomain: sfo3-a.prod.do
           zone: gather.town
+          level: info
           filters:
             branches:
               only:
@@ -290,6 +306,7 @@ workflows:
           provider: cloudflare
           subdomain: nyc3-a.prod.do
           zone: gather.town
+          level: info
           filters:
             branches:
               only:
@@ -305,6 +322,7 @@ workflows:
           provider: cloudflare
           subdomain: nyc3-b.prod.do
           zone: gather.town
+          level: info
           filters:
             branches:
               only:
@@ -321,6 +339,7 @@ workflows:
           provider: digitalocean
           subdomain: stg
           zone: k8s.gather.town
+          level: info
           filters:
             branches:
               only:
@@ -335,6 +354,7 @@ workflows:
           provider: cloudflare
           subdomain: ""
           zone: gather.town
+          level: info
           filters:
             branches:
               only:
