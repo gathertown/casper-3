@@ -167,7 +167,7 @@ workflows:
           provider: digitalocean
           subdomain: dev
           zone: k8s.gather.town
-          level: debug
+          level: info
           filters:
             branches:
               only:
