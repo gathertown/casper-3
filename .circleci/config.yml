@@ -1,19 +1,14 @@
 version: 2.1
 
 orbs:
-  docker: circleci/docker@1.4.0
+  docker: circleci/docker@1.7.0
   k8s: digitalocean/k8s@0.1.1
   kubernetes: circleci/kubernetes@0.11.2
   slack: circleci/slack@4.1.4
   browser-tools: circleci/browser-tools@1.1.1
   jq: circleci/jq@2.2.0
   kuz: finc/kustomize@0.0.1
-
-executors:
-  build-executor:
-    machine:
-      image: ubuntu-2004:202101-01
-    resource_class: medium
+  envsbt: sawadashota/envsubst@1.1.0
 
 commands:
   deploy:
@@ -42,12 +37,12 @@ commands:
         default: "info"
     steps:
       - checkout
-      - get-commit-shorthash
       - k8s/install
       - kuz/install:
           version: "v4.0.1"
       - k8s/initialize:
           cluster: << parameters.cluster >>
+      - envsbt/install
       - run:
           environment:
             - ENV: <<parameters.environment>>
@@ -64,17 +59,11 @@ commands:
             /tmp/bin/secrethub read -n gather/gather-town/deploy/terraform/dockerhub_credentials > deployments/base/secrets/priv-docker-registry
             /tmp/bin/secrethub read -n gather/gather-town/deploy/terraform/<<parameters.token>>  > deployments/overlays/cluster/secrets/TOKEN
             cd deployments/overlays/cluster
-            kustomize edit set image << parameters.image >>:${SHORTHASH}
+            kustomize edit set image << parameters.image >>:${CIRCLE_SHA1:0:9}
             envsubst < deployment.yaml > deployment-temp.yaml
             rm -f deployment.yaml
             mv deployment-temp.yaml deployment.yaml
             kustomize build . | kubectl apply -f -
-  get-commit-shorthash:
-    steps:
-      - run:
-          name: Get git commit shorthash
-          command: |
-            echo 'export SHORTHASH="$(git rev-parse --short HEAD)"' >> $BASH_ENV
   build-and-push:
     description: "build and push docker image to registry"
     parameters:
@@ -86,38 +75,33 @@ commands:
         default: "Dockerfile"
     steps:
       - checkout
-      - get-commit-shorthash
       - docker/build:
           dockerfile: <<parameters.dockerfile>>
           image: <<parameters.image>>
-          tag: $SHORTHASH
+          tag: ${CIRCLE_SHA1:0:9}
       - docker/check
       - docker/push:
           image: <<parameters.image>>
-          tag: $SHORTHASH
+          tag: ${CIRCLE_SHA1:0:9}
 
 jobs:
   build-and-push:
     parameters:
-      executor:
-        default: build-executor
-        type: executor
       image:
         type: string
         default: "gathertown/casper-3"
       dockerfile:
         type: string
         default: "Dockerfile"
-    executor: <<parameters.executor>>
+    executor: docker/docker
     steps:
+      - setup_remote_docker:
+          version: 20.10.7
       - build-and-push:
           dockerfile: <<parameters.dockerfile>>
           image: <<parameters.image>>
   deploy:
     parameters:
-      executor:
-        default: build-executor
-        type: executor
       environment:
         type: string
       token:
@@ -133,8 +117,10 @@ jobs:
         type: string
       level:
         type: string
-    executor: <<parameters.executor>>
+    executor: docker/docker
     steps:
+      - setup_remote_docker:
+          version: 20.10.7
       - deploy:
           environment: <<parameters.environment>>
           token: <<parameters.token>>
@@ -174,7 +160,7 @@ workflows:
                 - develop
 
       # staging clusters
-      - deploy:
+      - deploy: &deploy-staging
           name: staging-do-nyc3-a
           requires:
             - build-and-push
@@ -190,23 +176,14 @@ workflows:
               only:
                 - staging
       - deploy:
+          <<: *deploy-staging
           name: staging-do-fra1-a
-          requires:
-            - build-and-push
-          token: TF_VAR_cf_token
           environment: staging-do-fra1-a
           cluster: $K8S_STG_FRA1_A
-          provider: cloudflare
           subdomain: fra1-a.stg.do
-          zone: gather.town
-          level: info
-          filters:
-            branches:
-              only:
-                - staging
 
       # production clusters
-      - deploy:
+      - deploy: &deploy-production
           name: production-do-blr1-a
           requires:
             - build-and-push
@@ -222,140 +199,67 @@ workflows:
               only:
                 - main
       - deploy:
+          <<: *deploy-production
           name: production-do-fra1-a
-          requires:
-            - build-and-push
-          token: TF_VAR_cf_token
           environment: production-do-fra1-a
           cluster: $K8S_PROD_FRA1_A
-          provider: cloudflare
           subdomain: fra1-a.prod.do
-          zone: gather.town
-          level: info
-          filters:
-            branches:
-              only:
-                - main
-      - deploy:
-          name: production-do-fra1-b
-          requires:
-            - build-and-push
-          token: TF_VAR_cf_token
-          environment: production-do-fra1-b
-          cluster: $K8S_PROD_FRA1_B
-          provider: cloudflare
-          subdomain: fra1-b.prod.do
-          zone: gather.town
-          level: info
-          filters:
-            branches:
-              only:
-                - main
-      - deploy:
-          name: production-do-sgp1-a
-          requires:
-            - build-and-push
-          token: TF_VAR_cf_token
-          environment: production-do-sgp1-a
-          cluster: $K8S_PROD_SGP1_A
-          provider: cloudflare
-          subdomain: sgp1-a.prod.do
-          zone: gather.town
-          level: info
-          filters:
-            branches:
-              only:
-                - main
-      - deploy:
-          name: production-do-sgp1-b
-          requires:
-            - build-and-push
-          token: TF_VAR_cf_token
-          environment: production-do-sgp1-b
-          cluster: $K8S_PROD_SGP1_B
-          provider: cloudflare
-          subdomain: sgp1-b.prod.do
-          zone: gather.town
-          level: info
-          filters:
-            branches:
-              only:
-                - main
-      - deploy:
-          name: production-do-sfo3-a
-          requires:
-            - build-and-push
-          token: TF_VAR_cf_token
-          environment: production-do-sfo3-a
-          cluster: $K8S_PROD_SFO3_A
-          provider: cloudflare
-          subdomain: sfo3-a.prod.do
-          zone: gather.town
-          level: info
-          filters:
-            branches:
-              only:
-                - main
-      - deploy:
-          name: production-do-nyc3-a
-          requires:
-            - build-and-push
-          token: TF_VAR_cf_token
-          environment: production-do-nyc3-a
-          cluster: $K8S_PROD_NYC3_A
-          provider: cloudflare
-          subdomain: nyc3-a.prod.do
-          zone: gather.town
-          level: info
-          filters:
-            branches:
-              only:
-                - main
 
       - deploy:
+          <<: *deploy-production
+          name: production-do-fra1-b
+          environment: production-do-fra1-b
+          cluster: $K8S_PROD_FRA1_B
+          subdomain: fra1-b.prod.do
+
+      - deploy:
+          <<: *deploy-production
+          name: production-do-sgp1-a
+          environment: production-do-sgp1-a
+          cluster: $K8S_PROD_SGP1_A
+          subdomain: sgp1-a.prod.do
+
+      - deploy:
+          <<: *deploy-production
+          name: production-do-sgp1-b
+          environment: production-do-sgp1-b
+          cluster: $K8S_PROD_SGP1_B
+          subdomain: sgp1-b.prod.do
+
+      - deploy:
+          <<: *deploy-production
+          name: production-do-sfo3-a
+          environment: production-do-sfo3-a
+          cluster: $K8S_PROD_SFO3_A
+          subdomain: sfo3-a.prod.do
+
+      - deploy:
+          <<: *deploy-production
+          name: production-do-nyc3-a
+          environment: production-do-nyc3-a
+          cluster: $K8S_PROD_NYC3_A
+          subdomain: nyc3-a.prod.do
+
+      - deploy:
+          <<: *deploy-production
           name: production-do-nyc3-b
-          requires:
-            - build-and-push
-          token: TF_VAR_cf_token
           environment: production-do-nyc3-b
           cluster: $K8S_PROD_NYC3_B
-          provider: cloudflare
           subdomain: nyc3-b.prod.do
-          zone: gather.town
-          level: info
-          filters:
-            branches:
-              only:
-                - main
 
       # legacy clusters
       - deploy:
+          <<: *deploy-staging
           name: staging
-          requires:
-            - build-and-push
-          token: TF_VAR_do_token
           environment: staging
           cluster: $K8S_STG_LEGACY
           provider: digitalocean
           subdomain: stg
           zone: k8s.gather.town
-          level: info
-          filters:
-            branches:
-              only:
-                - staging
+
       - deploy:
+          <<: *deploy-production
           name: production
-          requires:
-            - build-and-push
           environment: production
-          token: TF_VAR_cf_token
           cluster: $K8S_PROD_LEGACY
-          provider: cloudflare
           subdomain: ""
-          zone: gather.town
-          level: info
-          filters:
-            branches:
-              only:
-                - main
