@@ -5,11 +5,13 @@ kind: Kustomization
 namespace: infrastructure
 
 resources:
-- deployment.yaml
-- namespace.yaml
-- serviceaccount.yaml
 - clusterrole.yaml
 - clusterrolebinding.yaml
+- deployment.yaml
+- namespace.yaml
+- service.yaml
+- serviceaccount.yaml
+- servicemonitor.yaml
 
 secretGenerator:
   - name: priv-docker-registry
