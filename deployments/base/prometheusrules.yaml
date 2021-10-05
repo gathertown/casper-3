@@ -1,0 +1,31 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    prometheus: k8s
+    role: alert-rules
+    app: casper-3
+  name: casper-3
+  namespace: monitoring
+spec:
+  groups:
+  - name: casper-3.rules
+    rules:
+    - alert: ReachingDNSRecordLimitCloudFlare
+      annotations:
+        description: Reaching DNS records limit. Expand DNS records limit! Contact CloudFlare support, make sure we have enough leeway and/or increase the limit.
+        runbook_url: https://www.notion.so/gathertown/On-call-Runbook-14d151e3564847c6ae23d50382caa393#979c000c7e7f40179c486cf472e3a145
+        summary: Reaching DNS records on CloudFlare
+      expr: casper3_dns_records_total{job="casper-3",namespace="infrastructure",provider="cloudflare"} > 8500
+      for: 10m
+      labels:
+        severity: critical
+    - alert: ReachingDNSRecordLimitDigitalOcean
+      annotations:
+        description: Reaching DNS records limit. Expand DNS records limit! Contact DigitalOcean support, make sure we have enough leeway and/or increase the limit.
+        runbook_url: https://www.notion.so/gathertown/On-call-Runbook-14d151e3564847c6ae23d50382caa393#979c000c7e7f40179c486cf472e3a145
+        summary: Reaching DNS records on DigitalOcean
+      expr: casper3_dns_records_total{job="casper-3",namespace="infrastructure",provider="digitalocean"} > 5000
+      for: 10m
+      labels:
+        severity: critical

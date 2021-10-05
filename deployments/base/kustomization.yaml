@@ -12,6 +12,7 @@ resources:
 - service.yaml
 - serviceaccount.yaml
 - servicemonitor.yaml
+- prometheusrules.yaml
 
 secretGenerator:
   - name: priv-docker-registry

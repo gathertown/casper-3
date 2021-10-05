@@ -18,7 +18,7 @@ var (
 		Name:      "execution_error",
 		Namespace: namespace,
 		Subsystem: "app",
-		Help:      "Execution errors ecountered",
+		Help:      "Execution errors encountered by description",
 	},
 		[]string{"errorMessage"},
 	)

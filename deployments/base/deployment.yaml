@@ -13,6 +13,10 @@ spec:
     metadata:
       labels:
         app: casper-3
+      # testing datadog metrics integration:
+      # https://docs.datadoghq.com/agent/kubernetes/prometheus/#metric-collection-with-prometheus-annotations
+      annotations:
+        prometheus.io/scrape: "true"
     spec:
       serviceAccountName: casper-3
       containers:

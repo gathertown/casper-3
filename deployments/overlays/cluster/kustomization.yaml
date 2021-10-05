@@ -13,10 +13,10 @@ images:
 patchesStrategicMerge:
 - deployment.yaml
 
-
 secretGenerator:
 - files:
   - secrets/TOKEN
   name: token
+
 resources:
 - ../../base/
