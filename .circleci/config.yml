@@ -252,6 +252,7 @@ workflows:
           <<: *deploy-staging
           name: staging
           environment: staging
+          token: TF_VAR_do_token
           cluster: $K8S_STG_LEGACY
           provider: digitalocean
           subdomain: stg
