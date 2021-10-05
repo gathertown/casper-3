@@ -232,7 +232,7 @@ func (c CloudFlareDNS) SyncPods(pods []Pod) {
 		txtLabel := fmt.Sprintf("heritage=casper-3,pod-sync=true,environment=%s,podName=%s,assignedNode=%s,addressIPv4=%s", cfg.Env, podName, assignedNode, addressIPv4)
 		for _, txt := range txtRecordsFromPods {
 			cName := strings.Split(txt.Name, ".")
-			txtData := fmt.Sprintf("%v", txt.Data) // convert interface{} to string
+			txtData := fmt.Sprintf("%v", txt.Content) // convert interface{} to string
 			if cName[0] == podName && !strings.Contains(txtData, assignedNode) {
 				// then delete existing record and recreate new ones
 				logger.Debug("Found a pod with that might got rescheduled on a different node", podName)
