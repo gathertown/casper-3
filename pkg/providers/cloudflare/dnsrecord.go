@@ -159,7 +159,7 @@ func (c CloudFlareDNS) SyncPods(pods []Pod) {
 
 	// Generate arrays
 	for _, txtRecord := range txtRecords {
-		recordData := fmt.Sprintf("%v", txtRecord.Data) // convert interface{} to string
+		recordData := fmt.Sprintf("%v", txtRecord.Content) // convert interface{} to string
 
 		if strings.Contains(recordData, "pod-sync=true") { // save only the txtRecords that have been created from a pod-sync operation
 			cName := strings.Split(txtRecord.Name, ".")
