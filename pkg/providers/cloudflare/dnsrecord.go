@@ -195,7 +195,7 @@ func (c CloudFlareDNS) SyncPods(pods []Pod) {
 			} else {
 				txtLabel := fmt.Sprintf("heritage=casper-3,pod-sync=true,environment=%s,podName=%s,assignedNode=%s,addressIPv4=%s", cfg.Env, podName, assignedNode, addressIPv4)
 				txtRecordName := podName
-				_, err := addRecord(context.TODO(), client, cfg.Zone, podName, cfg.Subdomain, addressIPv4, txtRecordName, txtLabel, cfg.Env)
+				_, err := addRecord(context.TODO(), client, cfg.Zone, cfg.Subdomain, podName, addressIPv4, txtRecordName, txtLabel, cfg.Env)
 				if err != nil {
 					msg := fmt.Sprintf("%v", err)
 					metrics.ExecErrInc(msg)
@@ -247,7 +247,7 @@ func (c CloudFlareDNS) SyncPods(pods []Pod) {
 					metrics.ExecErrInc(msg)
 					logger.Info(err.Error())
 				}
-				_, _err := addRecord(context.TODO(), client, cfg.Zone, podName, cfg.Subdomain, addressIPv4, podName, txtLabel, cfg.Env)
+				_, _err := addRecord(context.TODO(), client, cfg.Zone, cfg.Subdomain, podName, addressIPv4, podName, txtLabel, cfg.Env)
 				if _err != nil {
 					msg := fmt.Sprintf("%v", err)
 					metrics.ExecErrInc(msg)
