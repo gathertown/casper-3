@@ -29,3 +29,12 @@ spec:
       for: 10m
       labels:
         severity: critical
+    - alert: CasperErrors
+      annotations:
+        description: 'casper-3 error "{{ $labels.errorMessage }}" encountered during execution'
+        runbook_url: https://www.notion.so/gathertown/On-call-Runbook-14d151e3564847c6ae23d50382caa393#5f4546d756e74531801a77cf6955e3f0
+        summary: 'casper-3 "{{ $labels.errorMessage }}"'
+      expr: (rate(casper3_app_execution_error[2m]) * 100) > 10
+      for: 1m
+      labels:
+        severity: critical
