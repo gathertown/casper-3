@@ -15,6 +15,7 @@ secretGenerator:
 - files:
   - secrets/TOKEN
   name: token
+  namespace: infrastructure
 
 resources:
 - ../../base/
