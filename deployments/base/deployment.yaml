@@ -28,7 +28,7 @@ spec:
             - name: LABEL_KEY
               value: doks.digitalocean.com/node-pool
             - name: LABEL_VALUES
-              value: "sfu, router"
+              value: "sfu"
             - name: ALLOW_SYNC_PODS
               value: "true"
       imagePullSecrets:
