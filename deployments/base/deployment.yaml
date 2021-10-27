@@ -30,7 +30,7 @@ spec:
             - name: LABEL_VALUES
               value: "sfu"
             - name: ALLOW_SYNC_PODS
-              value: "true"
+              value: "false"
       imagePullSecrets:
         - name: priv-docker-registry
       nodeSelector:
