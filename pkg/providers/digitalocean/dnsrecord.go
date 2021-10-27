@@ -159,8 +159,8 @@ func (c DigitalOceanDNS) SyncPods(pods []Pod) {
 
 	// Find new entries
 	addEntries := common.Compare(names, dnsRecords)
-	logger.Info("Entries to be added", "entries", addEntries)
 	if len(addEntries) > 0 {
+		logger.Info("Entries to be added", "entries", addEntries)
 		for _, name := range addEntries {
 			podName := ""
 			assignedNode := ""
@@ -192,6 +192,7 @@ func (c DigitalOceanDNS) SyncPods(pods []Pod) {
 	// Remove stale entries
 	deleteEntries := common.Compare(dnsRecords, names)
 	if len(deleteEntries) > 0 {
+		logger.Info("Entries to be deleted", "entries", deleteEntries)
 		for _, name := range deleteEntries {
 			cName := fmt.Sprintf("%s.%s", name, cfg.Zone)
 			if cfg.Subdomain != "" {
