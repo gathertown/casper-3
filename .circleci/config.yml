@@ -235,6 +235,13 @@ workflows:
 
       - deploy:
           <<: *deploy-production
+          name: production-do-sfo3-b
+          environment: production-do-sfo3-b
+          cluster: $K8S_PROD_SFO3_B
+          subdomain: sfo3-b.prod.do
+
+      - deploy:
+          <<: *deploy-production
           name: production-do-nyc3-a
           environment: production-do-nyc3-a
           cluster: $K8S_PROD_NYC3_A
@@ -246,6 +253,13 @@ workflows:
           environment: production-do-nyc3-b
           cluster: $K8S_PROD_NYC3_B
           subdomain: nyc3-b.prod.do
+
+      - deploy:
+          <<: *deploy-production
+          name: production-do-nyc3-c
+          environment: production-do-nyc3-c
+          cluster: $K8S_PROD_NYC3_C
+          subdomain: nyc3-c.prod.do
 
       # legacy clusters
       - deploy:
