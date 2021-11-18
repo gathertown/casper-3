@@ -260,21 +260,3 @@ workflows:
           environment: production-do-nyc3-c
           cluster: $K8S_PROD_NYC3_C
           subdomain: nyc3-c.prod.do
-
-      # legacy clusters
-      - deploy:
-          <<: *deploy-staging
-          name: staging
-          environment: staging
-          token: TF_VAR_do_token
-          cluster: $K8S_STG_LEGACY
-          provider: digitalocean
-          subdomain: stg
-          zone: k8s.gather.town
-
-      - deploy:
-          <<: *deploy-production
-          name: production
-          environment: production
-          cluster: $K8S_PROD_LEGACY
-          subdomain: ""
