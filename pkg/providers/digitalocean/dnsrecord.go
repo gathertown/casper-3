@@ -34,17 +34,6 @@ func (d DigitalOceanDNS) Sync(nodes []Node) {
 	// The source of truth are the TXT records as they are created and deleted alongside 'A' records.
 	recordType := "TXT"
 
-	// Count all records in the zone. Useful for alerting purposes
-	allRecords, err := getAllRecords(context.TODO(), client, cfg.Zone)
-	if err != nil {
-		msg := fmt.Sprintf("%v", err)
-		metrics.ExecErrInc(msg)
-		logger.Info("Error occured while fetching all records", "provider", cfg.Provider, "zone", cfg.Zone, "error", msg)
-		logger.Info(err.Error())
-		return
-	}
-	metrics.DNSRecordsTotal(cfg.Provider, allRecords)
-
 	// Fetch all TXT DNS
 	txtRecords, err := getRecords(context.TODO(), client, cfg.Zone, recordType)
 	if err != nil {
@@ -111,8 +100,18 @@ func (d DigitalOceanDNS) Sync(nodes []Node) {
 		}
 	}
 
+	// Count all records in the zone. Useful for alerting purposes
+	allRecords, err := getAllRecords(context.TODO(), client, cfg.Zone)
+	if err != nil {
+		msg := fmt.Sprintf("%v", err)
+		metrics.ExecErrInc(msg)
+		logger.Info("Error occured while fetching all records", "provider", cfg.Provider, "zone", cfg.Zone, "error", msg)
+		logger.Info(err.Error())
+		return
+	}
+	metrics.DNSRecordsTotal(cfg.Provider, allRecords)
+
 	// Find kubernetes nodes to register
-	return
 }
 
 func (c DigitalOceanDNS) SyncPods(pods []Pod) {
@@ -245,19 +244,28 @@ func (c DigitalOceanDNS) SyncPods(pods []Pod) {
 }
 
 func getRecords(ctx context.Context, client *godo.Client, domain string, recordType string) ([]godo.DomainRecord, error) {
+	records := []godo.DomainRecord{}
 	opt := &godo.ListOptions{
 		Page:    1,
-		PerPage: 1000,
+		PerPage: 200,
 	}
-	records, _, err := client.Domains.RecordsByType(ctx, domain, recordType, opt)
 
-	if err != nil {
-		msg := fmt.Sprintf("%v", err)
-		metrics.ExecErrInc(msg)
-		return nil, err
+	for {
+		rr, _, err := client.Domains.RecordsByType(ctx, domain, recordType, opt)
+		if err != nil {
+			msg := fmt.Sprintf("%v", err)
+			metrics.ExecErrInc(msg)
+			return records, err
+		}
+
+		if len(rr) < opt.PerPage {
+			return records, nil
+		}
+
+		opt.Page += 1
+		records = append(records, rr...)
+		logger.Debug(fmt.Sprintf("Fetched %d DNS records", len(rr)), "type", recordType, "records", records)
 	}
-	logger.Debug("Fetched DNS records", "type", recordType, "records", records)
-	return records, err
 }
 
 func deleteRecord(ctx context.Context, client *godo.Client, zone string, name string) (bool, error) {
