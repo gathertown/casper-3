@@ -100,17 +100,6 @@ func (d DigitalOceanDNS) Sync(nodes []Node) {
 		}
 	}
 
-	// Count all records in the zone. Useful for alerting purposes
-	allRecords, err := getAllRecords(context.TODO(), client, cfg.Zone)
-	if err != nil {
-		msg := fmt.Sprintf("%v", err)
-		metrics.ExecErrInc(msg)
-		logger.Info("Error occured while fetching all records", "provider", cfg.Provider, "zone", cfg.Zone, "error", msg)
-		logger.Info(err.Error())
-		return
-	}
-	metrics.DNSRecordsTotal(cfg.Provider, allRecords)
-
 	// Find kubernetes nodes to register
 }
 
@@ -240,7 +229,6 @@ func (c DigitalOceanDNS) SyncPods(pods []Pod) {
 	}
 
 	// Find kubernetes pods to register
-	return
 }
 
 func getRecords(ctx context.Context, client *godo.Client, domain string, recordType string) ([]godo.DomainRecord, error) {
@@ -343,30 +331,4 @@ func addRecord(ctx context.Context, client *godo.Client, zone string, name strin
 	logger.Info("Added DNS record", "zone", zone, "name", name, "type", "TXT", "responseStatus", txtRecordResponse.Status)
 
 	return true, err
-}
-
-func getAllRecords(ctx context.Context, client *godo.Client, domain string) (float64, error) {
-	var n float64
-	opt := &godo.ListOptions{
-		Page:    0,
-		PerPage: 100,
-	}
-	for {
-		records, resp, err := client.Domains.Records(ctx, domain, opt)
-		if err != nil {
-			fmt.Println(err)
-		}
-		n += float64(len(records))
-		if resp.Links == nil || resp.Links.IsLastPage() {
-			break
-		}
-		page, err := resp.Links.CurrentPage()
-		if err != nil {
-			return 0.0, err
-		}
-		// set the page we want for the next request
-		opt.Page = page + 1
-	}
-
-	return n, nil
 }
