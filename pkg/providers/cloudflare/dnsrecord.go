@@ -46,7 +46,6 @@ func (d CloudFlareDNS) Sync(nodes []Node) {
 		if err != nil {
 			metrics.ExecErrInc(err.Error())
 			logger.Error("Error occured while fetching all records", "provider", cfg.Provider, "zone", cfg.Zone, "error", err.Error())
-			return
 		}
 		metrics.DNSRecordsTotal(cfg.Provider, allRecords)
 	}()
