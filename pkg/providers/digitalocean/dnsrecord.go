@@ -37,10 +37,8 @@ func (d DigitalOceanDNS) Sync(nodes []Node) {
 	// Fetch all TXT DNS
 	txtRecords, err := getRecords(context.TODO(), client, cfg.Zone, recordType)
 	if err != nil {
-		msg := fmt.Sprintf("%v", err)
-		metrics.ExecErrInc(msg)
-		logger.Info("Error occured while fetching records", "provider", cfg.Provider, "zone", cfg.Zone, "host", cfg.Subdomain)
-		logger.Info(err.Error())
+		metrics.ExecErrInc(err.Error())
+		logger.Error("Error occured while fetching records", "provider", cfg.Provider, "zone", cfg.Zone, "host", cfg.Subdomain, "error", err.Error())
 		return
 	}
 
@@ -76,9 +74,8 @@ func (d DigitalOceanDNS) Sync(nodes []Node) {
 			} else {
 				_, err := addRecord(context.TODO(), client, cfg.Zone, name, cfg.Subdomain, addressIPv4, "", "", cfg.Env)
 				if err != nil {
-					msg := fmt.Sprintf("%v", err)
-					metrics.ExecErrInc(msg)
-					logger.Info(err.Error())
+					metrics.ExecErrInc(err.Error())
+					logger.Error("Error occured while adding records", "provider", cfg.Provider, "zone", cfg.Zone, "host", cfg.Subdomain, "error", err.Error())
 				}
 			}
 		}
@@ -93,9 +90,8 @@ func (d DigitalOceanDNS) Sync(nodes []Node) {
 			logger.Debug("Launching deletion", "record", cName)
 			_, err := deleteRecord(context.TODO(), client, cfg.Zone, cName)
 			if err != nil {
-				msg := fmt.Sprintf("%v", err)
-				metrics.ExecErrInc(msg)
-				logger.Info(err.Error())
+				metrics.ExecErrInc(err.Error())
+				logger.Error("Error occured while deleting records", "provider", cfg.Provider, "zone", cfg.Zone, "host", cfg.Subdomain, "error", err.Error())
 			}
 		}
 	}
@@ -123,10 +119,8 @@ func (c DigitalOceanDNS) SyncPods(pods []Pod) {
 	// Fetch all TXT DNS
 	txtRecords, err := getRecords(context.TODO(), client, cfg.Zone, recordType)
 	if err != nil {
-		msg := fmt.Sprintf("%v", err)
-		metrics.ExecErrInc(msg)
-		logger.Info("Error occured while fetching records", "provider", cfg.Provider, "zone", cfg.Zone, "host", cfg.Subdomain)
-		logger.Info(err.Error())
+		metrics.ExecErrInc(err.Error())
+		logger.Error("Error occured while fetching records", "provider", cfg.Provider, "zone", cfg.Zone, "host", cfg.Subdomain, "error", err.Error())
 		return
 	}
 
@@ -169,9 +163,8 @@ func (c DigitalOceanDNS) SyncPods(pods []Pod) {
 				txtRecordName := podName
 				_, err := addRecord(context.TODO(), client, cfg.Zone, podName, cfg.Subdomain, addressIPv4, txtRecordName, txtLabel, cfg.Env)
 				if err != nil {
-					msg := fmt.Sprintf("%v", err)
-					metrics.ExecErrInc(msg)
-					logger.Info(err.Error())
+					metrics.ExecErrInc(err.Error())
+					logger.Error("Error occured while adding record", "provider", cfg.Provider, "zone", cfg.Zone, "host", cfg.Subdomain, "error", err.Error())
 				}
 			}
 		}
@@ -189,9 +182,8 @@ func (c DigitalOceanDNS) SyncPods(pods []Pod) {
 			logger.Debug("Launching deletion", "record", cName)
 			_, err := deleteRecord(context.TODO(), client, cfg.Zone, cName)
 			if err != nil {
-				msg := fmt.Sprintf("%v", err)
-				metrics.ExecErrInc(msg)
-				logger.Info(err.Error())
+				metrics.ExecErrInc(err.Error())
+				logger.Error("Error occured while deleting record", "provider", cfg.Provider, "zone", cfg.Zone, "host", cfg.Subdomain, "error", err.Error())
 			}
 		}
 	}
@@ -214,15 +206,13 @@ func (c DigitalOceanDNS) SyncPods(pods []Pod) {
 				logger.Debug("Launching deletion", "record", cName)
 				_, err := deleteRecord(context.TODO(), client, cfg.Zone, cName)
 				if err != nil {
-					msg := fmt.Sprintf("%v", err)
-					metrics.ExecErrInc(msg)
-					logger.Info(err.Error())
+					metrics.ExecErrInc(err.Error())
+					logger.Error("Error occured while deleting record", "provider", cfg.Provider, "zone", cfg.Zone, "host", cfg.Subdomain, "error", err.Error())
 				}
 				_, _err := addRecord(context.TODO(), client, cfg.Zone, podName, cfg.Subdomain, addressIPv4, podName, txtLabel, cfg.Env)
 				if _err != nil {
-					msg := fmt.Sprintf("%v", err)
-					metrics.ExecErrInc(msg)
-					logger.Info(err.Error())
+					metrics.ExecErrInc(err.Error())
+					logger.Error("Error occured while adding record", "provider", cfg.Provider, "zone", cfg.Zone, "host", cfg.Subdomain, "error", err.Error())
 				}
 			}
 		}
@@ -241,8 +231,7 @@ func getRecords(ctx context.Context, client *godo.Client, domain string, recordT
 	for {
 		rr, _, err := client.Domains.RecordsByType(ctx, domain, recordType, opt)
 		if err != nil {
-			msg := fmt.Sprintf("%v", err)
-			metrics.ExecErrInc(msg)
+			metrics.ExecErrInc(err.Error())
 			return records, err
 		}
 
@@ -264,15 +253,13 @@ func deleteRecord(ctx context.Context, client *godo.Client, zone string, name st
 
 	txtRecords, _, err := client.Domains.RecordsByTypeAndName(ctx, zone, "TXT", name, opt)
 	if err != nil {
-		msg := fmt.Sprintf("%v", err)
-		metrics.ExecErrInc(msg)
+		metrics.ExecErrInc(err.Error())
 		return false, err
 	}
 
 	aRecords, _, err := client.Domains.RecordsByTypeAndName(ctx, zone, "A", name, opt)
 	if err != nil {
-		msg := fmt.Sprintf("%v", err)
-		metrics.ExecErrInc(msg)
+		metrics.ExecErrInc(err.Error())
 		return false, err
 	}
 
@@ -282,8 +269,7 @@ func deleteRecord(ctx context.Context, client *godo.Client, zone string, name st
 		logger.Debug("Deleting", "record", record)
 		response, err := client.Domains.DeleteRecord(ctx, zone, record.ID)
 		if err != nil {
-			msg := fmt.Sprintf("%v", err)
-			metrics.ExecErrInc(msg)
+			metrics.ExecErrInc(err.Error())
 			return false, err
 		}
 		logger.Info("Deleted DNS record", "zone", zone, "record", record.Name, "type", record.Type, "responseStatus", response.Status)
@@ -316,16 +302,14 @@ func addRecord(ctx context.Context, client *godo.Client, zone string, name strin
 
 	_, aRecordResponse, err := client.Domains.CreateRecord(ctx, zone, aRecordRequest)
 	if err != nil {
-		msg := fmt.Sprintf("%v", err)
-		metrics.ExecErrInc(msg)
+		metrics.ExecErrInc(err.Error())
 		return false, err
 	}
 	logger.Info("Added record", "zone", zone, "name", name, "type", "A", "responseStatus", aRecordResponse.Status)
 
 	_, txtRecordResponse, err := client.Domains.CreateRecord(ctx, zone, txtRecordRequest)
 	if err != nil {
-		msg := fmt.Sprintf("%v", err)
-		metrics.ExecErrInc(msg)
+		metrics.ExecErrInc(err.Error())
 		return false, err
 	}
 	logger.Info("Added DNS record", "zone", zone, "name", name, "type", "TXT", "responseStatus", txtRecordResponse.Status)
