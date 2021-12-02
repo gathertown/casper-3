@@ -61,7 +61,7 @@ func (l *Logger) Debug(message string, keyvals ...interface{}) {
 // Error logs at error log level. For each key, a value should also be provided. If
 // a value is not provided, the key will be ignored.
 func (l *Logger) Error(message string, keyvals ...interface{}) {
-	l.logger.WithFields(toMap(keyvals...)).Debug(message)
+	l.logger.WithFields(toMap(keyvals...)).Error(message)
 }
 
 func toMap(keyvals ...interface{}) map[string]interface{} {

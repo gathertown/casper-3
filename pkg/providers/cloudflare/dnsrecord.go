@@ -40,14 +40,15 @@ func (d CloudFlareDNS) Sync(nodes []Node) {
 	recordType := "TXT"
 
 	// Count all records in the zone. Useful for alerting purposes.
-	// This call is pretty expensive ~50s for 3k records, run in a goroutine.
+	// This call is expensive. Takes up to ~50s for 3k records. Run in a Goroutine.
 	go func() {
 		allRecords, err := getAllRecords(context.TODO(), client, cfg.Zone)
 		if err != nil {
 			metrics.ExecErrInc(err.Error())
 			logger.Error("Error occured while fetching all records", "provider", cfg.Provider, "zone", cfg.Zone, "error", err.Error())
+		} else {
+			metrics.DNSRecordsTotal(cfg.Provider, allRecords)
 		}
-		metrics.DNSRecordsTotal(cfg.Provider, allRecords)
 	}()
 
 	// Fetch all TXT DNS
