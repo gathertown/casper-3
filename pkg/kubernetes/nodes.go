@@ -24,8 +24,7 @@ func (c *Cluster) Nodes() ([]Node, error) {
 
 	n, err := c.GetNodes(cfg.LabelKey, cfg.LabelValues)
 	if err != nil {
-		msg := fmt.Sprintf("%v", err)
-		metrics.ExecErrInc(msg)
+		metrics.ExecErrInc(err.Error())
 		return nil, err
 	}
 
@@ -50,8 +49,7 @@ func (c *Cluster) GetNodes(labelKey string, labelValues string) (*v1.NodeList, e
 	}
 	n, err := c.Client.CoreV1().Nodes().List(context.TODO(), opts)
 	if err != nil {
-		msg := fmt.Sprintf("%v", err)
-		metrics.ExecErrInc(msg)
+		metrics.ExecErrInc(err.Error())
 		return nil, err
 	}
 	return n, nil
@@ -60,8 +58,7 @@ func (c *Cluster) GetNodes(labelKey string, labelValues string) (*v1.NodeList, e
 func (c *Cluster) getExternalIpByNodeName(nodeName string) (string, error) {
 	n, err := c.Client.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
 	if err != nil {
-		msg := fmt.Sprintf("%v", err)
-		metrics.ExecErrInc(msg)
+		metrics.ExecErrInc(err.Error())
 		return "", err
 	}
 	ip := n.Status.Addresses[2].Address

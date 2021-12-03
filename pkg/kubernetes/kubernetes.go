@@ -3,8 +3,6 @@
 package kubernetes
 
 import (
-	"fmt"
-
 	"github.com/gathertown/casper-3/internal/metrics"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -19,15 +17,13 @@ type Cluster struct {
 func New() (*Cluster, error) {
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		msg := fmt.Sprintf("%v", err)
-		metrics.ExecErrInc(msg)
+		metrics.ExecErrInc(err.Error())
 		return nil, err
 	}
 	// creates the clientset
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		msg := fmt.Sprintf("%v", err)
-		metrics.ExecErrInc(msg)
+		metrics.ExecErrInc(err.Error())
 		return nil, err
 	}
 	return &Cluster{Client: clientset}, nil

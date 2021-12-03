@@ -24,8 +24,7 @@ func (c *Cluster) Pods() ([]Pod, error) {
 	for _, pod := range p.Items {
 		externalIp, err := c.getExternalIpByNodeName(pod.Spec.NodeName)
 		if err != nil {
-			msg := fmt.Sprintf("%v", err)
-			metrics.ExecErrInc(msg)
+			metrics.ExecErrInc(err.Error())
 			return nil, err
 		}
 		podLabels := make(map[string]string)
@@ -45,8 +44,7 @@ func (c *Cluster) GetPods(labelKey string, labelValue string) (*v1.PodList, erro
 	}
 	p, err := c.Client.CoreV1().Pods("").List(context.TODO(), opts)
 	if err != nil {
-		msg := fmt.Sprintf("%v", err)
-		metrics.ExecErrInc(msg)
+		metrics.ExecErrInc(err.Error())
 		return nil, err
 	}
 	return p, nil

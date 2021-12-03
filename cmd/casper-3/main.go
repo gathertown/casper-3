@@ -32,8 +32,7 @@ func main() {
 	logger := log.New(os.Stdout, cfg.LogLevel)
 	interval, err := strconv.ParseInt(cfg.ScanIntervalSeconds, 10, 64)
 	if err != nil {
-		msg := fmt.Sprintf("%v", err)
-		logger.Info(msg)
+		logger.Error(err.Error())
 		return
 	}
 
@@ -53,14 +52,12 @@ func main() {
 	for {
 		c, err := kubernetes.New()
 		if err != nil {
-			msg := fmt.Sprintf("%v", err)
-			logger.Info(msg)
-			return
+			logger.Error("Error occured while initializing pods", "provider", cfg.Provider, "zone", cfg.Zone, "host", cfg.Subdomain, "error", err.Error())
 		}
 
 		n, err := c.Nodes()
 		if err != nil {
-			fmt.Println(err)
+			logger.Error("Error occured while fetching kubernetes nodes info", "provider", cfg.Provider, "zone", cfg.Zone, "host", cfg.Subdomain, "error", err.Error())
 		}
 
 		p.Sync(n)
@@ -68,8 +65,7 @@ func main() {
 		if syncPodsAllowed, _ := strconv.ParseBool(cfg.AllowSyncPods); syncPodsAllowed {
 			pods, err := c.Pods()
 			if err != nil {
-				msg := fmt.Sprintf("%v", err)
-				logger.Info(msg)
+				logger.Error("Error occured while syncing pods", "provider", cfg.Provider, "zone", cfg.Zone, "host", cfg.Subdomain, "error", err.Error())
 			}
 
 			p.SyncPods(pods)
