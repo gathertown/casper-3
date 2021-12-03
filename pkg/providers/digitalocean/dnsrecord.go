@@ -59,8 +59,8 @@ func (d DigitalOceanDNS) Sync(nodes []Node) {
 
 	// Find new entries
 	addEntries := common.Compare(nodeHostnames, dnsRecords)
-	logger.Info("Entries to be added", "entries", addEntries)
 	if len(addEntries) > 0 {
+		logger.Info("Entries to be added", "entries", addEntries)
 		for _, name := range addEntries {
 			addressIPv4 := ""
 			// this loop seems a bit inefficient at first glance
