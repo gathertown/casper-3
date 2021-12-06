@@ -11,12 +11,6 @@ images:
 patchesStrategicMerge:
 - deployment.yaml
 
-secretGenerator:
-- files:
-  - secrets/TOKEN
-  name: token
-  namespace: infrastructure
-
 resources:
 - ../../base/
 - prometheusrules.yaml

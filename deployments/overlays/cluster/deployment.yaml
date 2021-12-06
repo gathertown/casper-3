@@ -10,7 +10,7 @@ spec:
           image: gathertown/casper-3:6392065
           envFrom:
             - secretRef:
-                name: token
+                name: casper-3-environment
           env:
             - name: ENV
               value: ${ENV}

@@ -51,13 +51,7 @@ commands:
             - ZONE: <<parameters.zone>>
             - LOGLEVEL: <<parameters.level>>
           command: |
-            mkdir ~/.secrethub
-            echo ${SECRETHUB_CREDENTIAL} > ~/.secrethub/credential
-            curl -LO https://github.com/secrethub/secrethub-cli/releases/download/v0.41.2/secrethub-v0.41.2-linux-amd64.tar.gz
-            tar zxvf secrethub-v0.41.2-linux-amd64.tar.gz -C /tmp
-            mkdir -p deployments/base/secrets deployments/overlays/cluster/secrets
-            /tmp/bin/secrethub read -n gather/gather-town/deploy/terraform/dockerhub_credentials > deployments/base/secrets/priv-docker-registry
-            /tmp/bin/secrethub read -n gather/gather-town/deploy/terraform/<<parameters.token>>  > deployments/overlays/cluster/secrets/TOKEN
+            sed -i "s/__KUSTOMIZE_DOCKERHUB_CREDENTIALS__/$(echo -n ${DOCKERHUB_CREDENTIALS} | base64 -w0)/g" deployments/base/docker-registry.yaml
             cd deployments/overlays/cluster
             kustomize edit set image << parameters.image >>:${CIRCLE_SHA1:0:9}
             envsubst < deployment.yaml > deployment-temp.yaml

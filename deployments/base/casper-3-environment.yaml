@@ -1,0 +1,12 @@
+apiVersion: secrets.doppler.com/v1alpha1
+kind: DopplerSecret
+metadata:
+  name: casper-3-environment-secrets # DopplerSecret Name
+  namespace: infrastructure
+spec:
+  tokenSecret: # Kubernetes service token secret (namespace defaults to doppler-operator-system)
+    name: doppler-gather-town-casper-3-circleci-token
+    namespace: doppler-operator-system
+  managedSecret: # Kubernetes managed secret (will be created if does not exist)
+    name: casper-3-environment
+    namespace: __KUSTOMIZE_NAMESPACE__ # Should match the namespace of deployments that will use the secret

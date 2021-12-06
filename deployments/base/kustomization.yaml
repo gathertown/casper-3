@@ -12,9 +12,5 @@ resources:
 - service.yaml
 - serviceaccount.yaml
 - servicemonitor.yaml
-
-secretGenerator:
-  - name: priv-docker-registry
-    files:
-      - .dockerconfigjson=secrets/priv-docker-registry
-    type: kubernetes.io/dockerconfigjson
+- docker-registry.yaml
+- casper-3-environment.yaml
