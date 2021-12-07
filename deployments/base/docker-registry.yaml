@@ -1,0 +1,7 @@
+apiVersion: v1
+metadata:
+  name: priv-docker-registry
+data:
+  .dockerconfigjson: __KUSTOMIZE_DOCKERHUB_CREDENTIALS__
+kind: Secret
+type: kubernetes.io/dockerconfigjson
