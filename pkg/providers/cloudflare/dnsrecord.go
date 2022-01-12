@@ -359,7 +359,7 @@ func addRecord(ctx context.Context, client *cloudflare.API, zone string, subdoma
 		metrics.ExecErrInc(err.Error())
 		return false, err
 	}
-	logger.Info("Added record", "zone", zone, "name", sName, "type", "A", "success", aRecord.Success)
+	logger.Info("Added record", "zone", zone, "name", sName, "type", "A", "success", aRecord.Success, "content", addressIPv4)
 
 	return true, err
 }
