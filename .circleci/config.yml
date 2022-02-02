@@ -144,7 +144,7 @@ workflows:
           environment: development
           token: TF_VAR_do_token
           cluster: $K8S_DEV_NYC1
-          provider: digitalocean
+          provider: cloudflare
           subdomain: dev
           zone: k8s.gather.town
           level: info
