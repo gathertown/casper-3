@@ -53,11 +53,17 @@ func main() {
 		c, err := kubernetes.New()
 		if err != nil {
 			logger.Error("Error occured while initializing pods", "provider", cfg.Provider, "zone", cfg.Zone, "host", cfg.Subdomain, "error", err.Error())
+			// Wait before we continue to next iteration
+			time.Sleep(time.Duration(interval) * time.Second)
+			continue
 		}
 
 		n, err := c.Nodes()
 		if err != nil {
 			logger.Error("Error occured while fetching kubernetes nodes info", "provider", cfg.Provider, "zone", cfg.Zone, "host", cfg.Subdomain, "error", err.Error())
+			// Wait before we continue to next iteration
+			time.Sleep(time.Duration(interval) * time.Second)
+			continue
 		}
 
 		p.Sync(n)
