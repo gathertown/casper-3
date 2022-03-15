@@ -70,6 +70,7 @@ func (d CloudFlareDNS) Sync(nodes []Node) {
 	logger.Debug("DNS records found", "records", dnsRecords)
 
 	for _, node := range nodes {
+		// convert "ip-1-2-3-4.ec.internal" to "ip-1-2-3-4" to avoid DNS A record setup failure on Cloudflare
 		nodeHostnames = append(nodeHostnames, node.Name)
 	}
 	logger.Debug("SFU nodes found", "nodes", nodeHostnames)
@@ -83,6 +84,7 @@ func (d CloudFlareDNS) Sync(nodes []Node) {
 			// this loop seems a bit inefficient at first glance
 			// entries are bellow 1k, so shouldn't really matter.
 			for _, entry := range nodes {
+				logger.Debug("entries", "name", name, "zone", cfg.Zone, "entries", entry.ExternalIP)
 				if entry.Name == name {
 					addressIPv4 = entry.ExternalIP
 				}
@@ -94,7 +96,7 @@ func (d CloudFlareDNS) Sync(nodes []Node) {
 				_, err := addRecord(context.TODO(), client, cfg.Zone, cfg.Subdomain, name, addressIPv4, "", "", cfg.Env)
 				if err != nil {
 					metrics.ExecErrInc(err.Error())
-					logger.Error("Error occured while adding record", "provider", cfg.Provider, "zone", cfg.Zone, "error", err.Error())
+					logger.Error("Error occured while adding record", "provider", cfg.Provider, "zone", cfg.Zone, "name", name, "error", err.Error())
 				}
 			}
 		}

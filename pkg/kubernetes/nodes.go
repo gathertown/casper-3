@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/gathertown/casper-3/internal/config"
 	"github.com/gathertown/casper-3/internal/metrics"
@@ -29,11 +30,20 @@ func (c *Cluster) Nodes() ([]Node, error) {
 	}
 
 	for _, node := range n.Items {
-		if len(node.Status.Addresses) < 3 {
+		IPFound := false
+		for _, addr := range node.Status.Addresses {
+			if addr.Type != "ExternalIP" {
+				// if `ExternalIP` not found hop to the next iteration
+				continue
+			}
+			nodeName := strings.Split(node.Name, ".")[0]
+			logger.Debug("IPv4 address found", "node", nodeName, "IPv4", addr.Address)
+			nodes = append(nodes, Node{nodeName, addr.Address})
+			IPFound = true
+			break
+		}
+		if !IPFound {
 			logger.Info("No IPv4 address found", "node", node.Name)
-		} else {
-			logger.Debug("IPv4 address found", "node", node.Name, "IPv4", node.Status.Addresses[2].Address)
-			nodes = append(nodes, Node{node.Name, node.Status.Addresses[2].Address})
 		}
 	}
 
