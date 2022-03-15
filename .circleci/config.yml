@@ -29,8 +29,6 @@ commands:
       cluster:
         type: string
         default: abcd
-      provider:
-        type: string
       subdomain:
         type: string
         default: ""
@@ -71,7 +69,7 @@ commands:
           name: deploy casper-3 application to kubernetes cluster
           environment:
             - ENV: <<parameters.environment>>
-            - PROVIDER: <<parameters.provider>>
+            - PROVIDER: cloudflare
             - SUBDOMAIN: <<parameters.subdomain>>
             - ZONE: <<parameters.zone>>
             - LOGLEVEL: <<parameters.level>>
@@ -130,8 +128,6 @@ jobs:
         default: "DigitalOcean"
       cluster:
         type: string
-      provider:
-        type: string
       subdomain:
         type: string
         default: ""
@@ -150,7 +146,6 @@ jobs:
           environment: <<parameters.environment>>
           token: <<parameters.token>>
           cluster: <<parameters.cluster>>
-          provider: <<parameters.provider>>
           subdomain: <<parameters.subdomain>>
           zone: <<parameters.zone>>
           level: <<parameters.level>>
@@ -177,7 +172,6 @@ workflows:
           environment: development
           token: TF_VAR_do_token
           cluster: $K8S_DEV_NYC1
-          provider: cloudflare
           subdomain: dev
           zone: k8s.gather.town
           level: info
@@ -194,7 +188,6 @@ workflows:
           token: TF_VAR_cf_token
           environment: staging-do-nyc3-a
           cluster: $K8S_STG_NYC3_A
-          provider: cloudflare
           subdomain: nyc3-a.stg.do
           zone: gather.town
           level: info
@@ -217,7 +210,6 @@ workflows:
           token: TF_VAR_cf_token
           environment: production-do-blr1-a
           cluster: $K8S_PROD_BLR1_A
-          provider: cloudflare
           subdomain: blr1-a.prod.do
           zone: gather.town
           level: info
