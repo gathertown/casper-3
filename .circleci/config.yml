@@ -2,13 +2,15 @@ version: 2.1
 
 orbs:
   docker: circleci/docker@1.7.0
-  k8s: digitalocean/k8s@0.1.1
-  kubernetes: circleci/kubernetes@0.11.2
+  doks: digitalocean/k8s@0.1.1
+  kubernetes: circleci/kubernetes@1.3.0
   slack: circleci/slack@4.1.4
   browser-tools: circleci/browser-tools@1.1.1
   jq: circleci/jq@2.2.0
   kuz: finc/kustomize@0.0.1
   envsbt: sawadashota/envsubst@1.1.0
+  eks: circleci/aws-eks@2.1.1
+  aws-cli: circleci/aws-cli@2.1.0
 
 commands:
   deploy:
@@ -17,6 +19,8 @@ commands:
       token:
         type: string
         default: "TF_VAR_do_token"
+      cloud_provider:
+        type: string
       environment:
         type: string
       image:
@@ -32,18 +36,39 @@ commands:
         default: ""
       zone:
         type: string
+      region:
+        type: string
       level:
         type: string
         default: "info"
     steps:
       - checkout
-      - k8s/install
+      - kubernetes/install-kubectl
+      - envsbt/install
       - kuz/install:
           version: "v4.0.1"
-      - k8s/initialize:
-          cluster: << parameters.cluster >>
-      - envsbt/install
+      - when:
+          condition:
+            equal: [<<parameters.cloud_provider>>, "DigitalOcean"]
+          steps:
+            - doks/install
+            - doks/initialize:
+                cluster: <<parameters.cluster>>
+      - when:
+          condition:
+            equal: [<<parameters.cloud_provider>>, "AmazonWebServices"]
+          steps:
+            - run:
+                name: set proper AWS region
+                command: |
+                  echo 'export AWS_DEFAULT_REGION=<<parameters.region>>' >> $BASH_ENV
+            - aws-cli/setup:
+                aws-access-key-id: AWS_EKS_DEPLOY_USER
+                aws-secret-access-key: AWS_EKS_DEPLOY_KEY
+            - eks/update-kubeconfig-with-authenticator:
+                cluster-name: <<parameters.cluster>>
       - run:
+          name: deploy casper-3 application to kubernetes cluster
           environment:
             - ENV: <<parameters.environment>>
             - PROVIDER: <<parameters.provider>>
@@ -53,7 +78,7 @@ commands:
           command: |
             sed -i "s/__KUSTOMIZE_DOCKERHUB_CREDENTIALS__/$(echo -n ${DOCKERHUB_CREDENTIALS} | base64 -w0)/g" deployments/base/docker-registry.yaml
             cd deployments/overlays/cluster
-            kustomize edit set image << parameters.image >>:${CIRCLE_SHA1:0:9}
+            kustomize edit set image <<parameters.image>>:${CIRCLE_SHA1:0:9}
             envsubst < deployment.yaml > deployment-temp.yaml
             rm -f deployment.yaml
             mv deployment-temp.yaml deployment.yaml
@@ -100,6 +125,9 @@ jobs:
         type: string
       token:
         type: string
+      cloud_provider:
+        type: string
+        default: "DigitalOcean"
       cluster:
         type: string
       provider:
@@ -109,6 +137,9 @@ jobs:
         default: ""
       zone:
         type: string
+      region:
+        type: string
+        default: "us-east-1"
       level:
         type: string
     executor: docker/docker
@@ -123,6 +154,8 @@ jobs:
           subdomain: <<parameters.subdomain>>
           zone: <<parameters.zone>>
           level: <<parameters.level>>
+          region: <<parameters.region>>
+          cloud_provider: <<parameters.cloud_provider>>
 
 workflows:
   build-and-push:
@@ -254,3 +287,12 @@ workflows:
           environment: production-do-nyc3-c
           cluster: $K8S_PROD_NYC3_C
           subdomain: nyc3-c.prod.do
+
+      - deploy:
+          <<: *deploy-production
+          name: production-aws-us-east-1-a
+          environment: production-aws-us-east-1-a
+          cluster: $K8S_PROD_AWS_US_EAST_1_A
+          subdomain: us-east-1-a.prod.aws
+          cloud_provider: AmazonWebServices
+          region: us-east-1
