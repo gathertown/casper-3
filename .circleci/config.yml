@@ -9,7 +9,6 @@ orbs:
   jq: circleci/jq@2.2.0
   kuz: finc/kustomize@0.0.1
   envsbt: sawadashota/envsubst@1.1.0
-  eks: circleci/aws-eks@2.1.1
   aws-cli: circleci/aws-cli@2.1.0
 
 commands:
@@ -59,12 +58,16 @@ commands:
             - run:
                 name: set proper AWS region
                 command: |
-                  echo 'export AWS_DEFAULT_REGION=<<parameters.region>>' >> $BASH_ENV
+                  echo "export AWS_DEFAULT_REGION=<<parameters.region>>" >> $BASH_ENV
+                  echo "export AWS_ACCESS_KEY_ID=${AWS_EKS_DEPLOY_USER}" >> $BASH_ENV
+                  echo "export AWS_SECRET_ACCESS_KEY=${AWS_EKS_DEPLOY_KEY}" >> $BASH_ENV
             - aws-cli/setup:
                 aws-access-key-id: AWS_EKS_DEPLOY_USER
                 aws-secret-access-key: AWS_EKS_DEPLOY_KEY
-            - eks/update-kubeconfig-with-authenticator:
-                cluster-name: <<parameters.cluster>>
+            - run:
+                name: configure kubernetes cluster
+                command: |
+                  aws eks --region <<parameters.region>> update-kubeconfig --name <<parameters.cluster>>
       - run:
           name: deploy casper-3 application to kubernetes cluster
           environment:
