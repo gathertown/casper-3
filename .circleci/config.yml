@@ -175,8 +175,8 @@ workflows:
           environment: development
           token: TF_VAR_do_token
           cluster: $K8S_DEV_NYC1
-          subdomain: dev
-          zone: k8s.gather.town
+          subdomain: dev.k8s
+          zone: gather.town
           level: info
           filters:
             branches:
