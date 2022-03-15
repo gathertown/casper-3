@@ -31,6 +31,18 @@ spec:
               value: "sfu"
             - name: ALLOW_SYNC_PODS
               value: "false"
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 300Mi
+          securityContext:
+            runAsUser: 5003
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - all
       imagePullSecrets:
         - name: priv-docker-registry
       nodeSelector:
