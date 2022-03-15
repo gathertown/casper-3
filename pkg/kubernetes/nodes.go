@@ -32,7 +32,7 @@ func (c *Cluster) Nodes() ([]Node, error) {
 		if len(node.Status.Addresses) < 3 {
 			logger.Info("No IPv4 address found", "node", node.Name)
 		} else {
-			logger.Debug("IPv4 address found", "node", node.Name)
+			logger.Debug("IPv4 address found", "node", node.Name, "IPv4", node.Status.Addresses[2].Address)
 			nodes = append(nodes, Node{node.Name, node.Status.Addresses[2].Address})
 		}
 	}

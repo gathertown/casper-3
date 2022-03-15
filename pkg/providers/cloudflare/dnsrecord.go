@@ -94,7 +94,7 @@ func (d CloudFlareDNS) Sync(nodes []Node) {
 				_, err := addRecord(context.TODO(), client, cfg.Zone, cfg.Subdomain, name, addressIPv4, "", "", cfg.Env)
 				if err != nil {
 					metrics.ExecErrInc(err.Error())
-					logger.Error("Error occured while fetching records", "provider", cfg.Provider, "zone", cfg.Zone, "error", err.Error())
+					logger.Error("Error occured while adding record", "provider", cfg.Provider, "zone", cfg.Zone, "error", err.Error())
 				}
 			}
 		}
