@@ -177,7 +177,7 @@ workflows:
           cluster: $K8S_DEV_NYC1
           subdomain: dev.k8s
           zone: gather.town
-          level: info
+          level: debug
           filters:
             branches:
               only:
@@ -193,7 +193,7 @@ workflows:
           cluster: $K8S_STG_NYC3_A
           subdomain: nyc3-a.stg.do
           zone: gather.town
-          level: info
+          level: debug
           filters:
             branches:
               only:
