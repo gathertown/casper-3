@@ -51,8 +51,8 @@ func (d CloudFlareDNS) Sync(nodes []Node) {
 		}
 	}()
 
-	// Fetch all TXT DNS
-	txtRecords, err := getRecords(context.TODO(), client, cfg.Zone, recordType)
+	// Fetch all TXT DNS that contain cluster's label
+	txtRecords, err := getRecordsPerTypePerContent(context.TODO(), client, cfg.Zone, recordType, label)
 	if err != nil {
 		metrics.ExecErrInc(err.Error())
 		logger.Error("Error occured while fetching records", "provider", cfg.Provider, "zone", cfg.Zone, "error", err.Error())
@@ -61,11 +61,9 @@ func (d CloudFlareDNS) Sync(nodes []Node) {
 
 	// Generate arrays
 	for _, record := range txtRecords {
-		if record.Content == label {
-			// convert "sfu-v81hha.dev" to "sfu-v81hha" to allow comparison with hostnames
-			cName := strings.Split(record.Name, ".")
-			dnsRecords = append(dnsRecords, cName[0])
-		}
+		// convert "sfu-v81hha.dev" to "sfu-v81hha" to allow comparison with hostnames
+		cName := strings.Split(record.Name, ".")
+		dnsRecords = append(dnsRecords, cName[0])
 	}
 	logger.Debug("DNS records found", "records", dnsRecords)
 
@@ -142,8 +140,8 @@ func (c CloudFlareDNS) SyncPods(pods []Pod) {
 
 	recordType := "TXT"
 
-	// Fetch all TXT DNS
-	txtRecords, err := getRecords(context.TODO(), client, cfg.Zone, recordType)
+	// Fetch all TXT DNS that contain cluster's label
+	txtRecords, err := getRecordsPerTypePerContent(context.TODO(), client, cfg.Zone, recordType, label)
 	if err != nil {
 		metrics.ExecErrInc(err.Error())
 		logger.Info("Error occured while fetching records", "provider", cfg.Provider, "zone", cfg.Zone, "host", cfg.Subdomain)
@@ -250,7 +248,7 @@ func (c CloudFlareDNS) SyncPods(pods []Pod) {
 	return
 }
 
-func getRecords(ctx context.Context, client *cloudflare.API, zone string, recordType string) ([]cloudflare.DNSRecord, error) {
+func getRecordsPerTypePerContent(ctx context.Context, client *cloudflare.API, zone string, recordType string, contentLabel string) ([]cloudflare.DNSRecord, error) {
 
 	// Get ZoneID
 	zoneID, err := client.ZoneIDByName(zone)
@@ -261,7 +259,7 @@ func getRecords(ctx context.Context, client *cloudflare.API, zone string, record
 
 	// Filtering by content doesn't work unfortunately,
 	// see https://github.com/cloudflare/cloudflare-go/issues/613
-	record := cloudflare.DNSRecord{Type: recordType}
+	record := cloudflare.DNSRecord{Type: recordType, Content: "contains:" + contentLabel}
 	records, err := client.DNSRecords(ctx, zoneID, record)
 	if err != nil {
 		metrics.ExecErrInc(err.Error())
