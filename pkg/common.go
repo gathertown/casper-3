@@ -1,5 +1,10 @@
 package common
 
+import (
+	"fmt"
+	"strings"
+)
+
 // shared structures
 type Node struct {
 	Name       string
@@ -30,4 +35,16 @@ func Compare(a, b []string) []string {
 	}
 
 	return diff
+}
+
+// Checks if a recordName follows the prefix pattern that k8s nodes have
+func RecordPrefixMatchesNodePrefixes(recordName string, nodeNames []string) bool {
+	for _, node := range nodeNames {
+		nodePrefix := strings.Split(node, "-")[0]
+		prefix := fmt.Sprintf("%s-", nodePrefix)
+		if strings.HasPrefix(recordName, prefix) {
+			return true
+		}
+	}
+	return false
 }

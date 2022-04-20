@@ -87,6 +87,10 @@ func (d DigitalOceanDNS) Sync(nodes []Node) {
 		for _, name := range deleteEntries {
 			// The 'Name' entry is the FQDN
 			cName := fmt.Sprintf("%s.%s.%s", name, cfg.Subdomain, cfg.Zone)
+			if isRecordSafeForDeletion := common.RecordPrefixMatchesNodePrefixes(cName, nodeHostnames); !isRecordSafeForDeletion {
+				logger.Info("Casper-3 wants to delete this record", "record", cName, "Skipping..")
+				continue
+			}
 			logger.Debug("Launching deletion", "record", cName)
 			_, err := deleteRecord(context.TODO(), client, cfg.Zone, cName)
 			if err != nil {

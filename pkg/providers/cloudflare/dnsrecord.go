@@ -110,6 +110,10 @@ func (d CloudFlareDNS) Sync(nodes []Node) {
 			if cfg.Subdomain != "" {
 				cName = fmt.Sprintf("%s.%s.%s", name, cfg.Subdomain, cfg.Zone)
 			}
+			if isRecordSafeForDeletion := common.RecordPrefixMatchesNodePrefixes(cName, nodeHostnames); !isRecordSafeForDeletion {
+				logger.Info("Casper-3 wants to delete this record", "record", cName, "Skipping..")
+				continue
+			}
 			logger.Debug("Launching deletion", "record", cName)
 			_, err := deleteRecord(context.TODO(), client, cfg.Zone, cName)
 			if err != nil {
