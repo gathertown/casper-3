@@ -356,7 +356,7 @@ func addRecord(ctx context.Context, client *cloudflare.API, zone string, subdoma
 		return false, err
 	}
 
-	logger.Info("Added DNS record", "zone", zone, "name", sName, "type", "TXT", "success", txtRecord.Success, "proxied", proxied)
+	logger.Info("Added DNS record", "zone", zone, "name", sName, "type", "TXT", "success", txtRecord.Success)
 
 	aRecordRequest := cloudflare.DNSRecord{
 		Type:    "A",
@@ -372,7 +372,7 @@ func addRecord(ctx context.Context, client *cloudflare.API, zone string, subdoma
 		metrics.ExecErrInc(err.Error())
 		return false, err
 	}
-	logger.Info("Added record", "zone", zone, "name", sName, "type", "A", "success", aRecord.Success, "content", addressIPv4)
+	logger.Info("Added record", "zone", zone, "name", sName, "type", "A", "success", aRecord.Success, "content", addressIPv4, "proxied", proxied)
 
 	return true, err
 }

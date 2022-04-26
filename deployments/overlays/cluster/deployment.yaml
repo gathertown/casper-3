@@ -23,4 +23,4 @@ spec:
             - name: ZONE
               value: ${ZONE}
             - name: CLOUDFLARE_PROXIED
-              value: ${CLOUDFLARE_PROXIED}
+              value: "${CLOUDFLARE_PROXIED}"
