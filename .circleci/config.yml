@@ -202,7 +202,7 @@ workflows:
           subdomain: nyc3-a.stg.do
           zone: gather.town
           level: debug
-          cloudflare_proxied: false
+          cloudflare_proxied: true
           filters:
             branches:
               only:
