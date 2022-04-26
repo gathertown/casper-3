@@ -264,6 +264,7 @@ workflows:
           environment: production-do-sfo3-a
           cluster: $K8S_PROD_SFO3_A
           subdomain: sfo3-a.prod.do
+          cloudflare_proxied: true
 
       - deploy:
           <<: *deploy-production
@@ -278,6 +279,7 @@ workflows:
           environment: production-do-nyc3-a
           cluster: $K8S_PROD_NYC3_A
           subdomain: nyc3-a.prod.do
+          cloudflare_proxied: true
 
       - deploy:
           <<: *deploy-production
