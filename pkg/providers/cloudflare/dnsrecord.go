@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	cloudflare "github.com/cloudflare/cloudflare-go"
@@ -344,13 +345,21 @@ func addRecord(ctx context.Context, client *cloudflare.API, zone string, subdoma
 		metrics.ExecErrInc(err.Error())
 		return false, err
 	}
-	logger.Info("Added DNS record", "zone", zone, "name", sName, "type", "TXT", "success", txtRecord.Success)
+
+	proxied, err := strconv.ParseBool(cfg.CloudFlareProxied)
+	if err != nil {
+		metrics.ExecErrInc(err.Error())
+		return false, err
+	}
+
+	logger.Info("Added DNS record", "zone", zone, "name", sName, "type", "TXT", "success", txtRecord.Success, "proxied", proxied)
 
 	aRecordRequest := cloudflare.DNSRecord{
 		Type:    "A",
 		Name:    sName,
 		Content: addressIPv4,
 		TTL:     1800,
+		Proxied: &proxied,
 	}
 
 	logger.Info("trying to add record", "zone", zone, "name", sName, "type", "A")

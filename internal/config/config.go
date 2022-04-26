@@ -19,6 +19,7 @@ const (
 	defaultAllowSyncPods       = "false"
 	defaultSyncPodLabelKey     = "casper-3.gather.town/sync"
 	defaultSyncPodLabelValue   = "true"
+	defaultCloudFlareProxied   = "false"
 )
 
 // Config contains service information that can be changed from the
@@ -36,6 +37,7 @@ type Config struct {
 	AllowSyncPods       string
 	SyncPodLabelKey     string
 	SyncPodLabelValue   string
+	CloudFlareProxied   string
 }
 
 // FromEnv returns the service configuration from the environment variables.
@@ -54,6 +56,7 @@ func FromEnv() *Config {
 		allowSyncPods       = getenv("ALLOW_SYNC_PODS", defaultAllowSyncPods)
 		syncPodLabelKey     = getenv("SYNC_POD_LABEL_KEY", defaultSyncPodLabelKey)
 		syncPodLabelValue   = getenv("SYNC_POD_LABEL_VALUE", defaultSyncPodLabelValue)
+		cloudFlareProxied   = getenv("CLOUDFLARE_PROXIED", defaultCloudFlareProxied)
 	)
 
 	c := &Config{
@@ -69,6 +72,7 @@ func FromEnv() *Config {
 		AllowSyncPods:       allowSyncPods,
 		SyncPodLabelKey:     syncPodLabelKey,
 		SyncPodLabelValue:   syncPodLabelValue,
+		CloudFlareProxied:   cloudFlareProxied,
 	}
 	return c
 }

@@ -38,6 +38,9 @@ commands:
       level:
         type: string
         default: "info"
+      cloudflare_proxied:
+        type: boolean
+        default: false
     steps:
       - checkout
       - kubernetes/install-kubectl
@@ -76,6 +79,7 @@ commands:
             - SUBDOMAIN: <<parameters.subdomain>>
             - ZONE: <<parameters.zone>>
             - LOGLEVEL: <<parameters.level>>
+            - CLOUDFLARE_PROXIED: <<parameters.cloudflare_proxied>>
           command: |
             sed -i "s/__KUSTOMIZE_DOCKERHUB_CREDENTIALS__/$(echo -n ${DOCKERHUB_CREDENTIALS} | base64 -w0)/g" deployments/base/docker-registry.yaml
             cd deployments/overlays/cluster
@@ -141,6 +145,8 @@ jobs:
         default: "us-east-1"
       level:
         type: string
+      cloudflare_proxied:
+        type: boolean
     executor: docker/docker
     steps:
       - setup_remote_docker:
@@ -154,6 +160,7 @@ jobs:
           level: <<parameters.level>>
           region: <<parameters.region>>
           cloud_provider: <<parameters.cloud_provider>>
+          cloudflare_proxied: <<parameters.cloudflare_proxied>>
 
 workflows:
   build-and-push:
@@ -178,6 +185,7 @@ workflows:
           subdomain: dev.k8s
           zone: gather.town
           level: debug
+          cloudflare_proxied: true
           filters:
             branches:
               only:
@@ -194,6 +202,7 @@ workflows:
           subdomain: nyc3-a.stg.do
           zone: gather.town
           level: debug
+          cloudflare_proxied: false
           filters:
             branches:
               only:
@@ -216,6 +225,7 @@ workflows:
           subdomain: blr1-a.prod.do
           zone: gather.town
           level: info
+          cloudflare_proxied: false
           filters:
             branches:
               only:
