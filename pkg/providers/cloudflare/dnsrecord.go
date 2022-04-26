@@ -301,12 +301,18 @@ func deleteRecord(ctx context.Context, client *cloudflare.API, zone string, fqdn
 	records := append(txtRecords, aRecords...)
 
 	for _, record := range records {
-		err := client.DeleteDNSRecord(ctx, zoneID, record.ID)
-		if err != nil {
-			metrics.ExecErrInc(err.Error())
+		// validate record to be deleted. Only records with name same as the fqdn input and type `TXT` or `A` are allowed to be deleted
+		if record.Name == fqdn && (record.Type == "TXT" || record.Type == "A") {
+			err := client.DeleteDNSRecord(ctx, zoneID, record.ID)
+			if err != nil {
+				metrics.ExecErrInc(err.Error())
+				return false, err
+			}
+			logger.Info("Deleted DNS record", "zone", zone, "record", record.Name, "type", record.Type)
+		} else {
+			err := fmt.Errorf("deleteRecord() wants to delete wrong record. Record Name: %v Record Type: %v", record.Name, record.Type)
 			return false, err
 		}
-		logger.Info("Deleted DNS record", "zone", zone, "record", record.Name, "type", record.Type)
 	}
 	return true, nil
 }
