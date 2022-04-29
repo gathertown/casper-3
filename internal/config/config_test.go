@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"reflect"
 	"testing"
 )
 
@@ -72,4 +73,33 @@ func TestFromEnv(t *testing.T) {
 	unsetenv(t, "TOKEN")
 	unsetenv(t, "SUBDOMAIN")
 	unsetenv(t, "ZONE")
+}
+
+func TestSplitAndRejoin(t *testing.T) {
+	type test struct {
+		input string
+		sep   string
+		want  string
+	}
+
+	tests := []test{
+		{input: "sfu,gameserver", sep: ",", want: "sfu, gameserver"},
+		{input: "sfu, gameserver", sep: ",", want: "sfu, gameserver"},
+		{input: "sfu, ,gameserver", sep: ",", want: "sfu, gameserver"},
+		{input: "sfu,,,gameserver", sep: ",", want: "sfu, gameserver"},
+		{input: "sfu,gameserver  ", sep: ",", want: "sfu, gameserver"},
+		{input: "  sfu  ,  gameserver  ", sep: ",", want: "sfu, gameserver"},
+		{input: " sfu,", sep: ",", want: "sfu"},
+		{input: "sfu", sep: ",", want: "sfu"},
+		{input: " sfu ", sep: ",", want: "sfu"},
+		{input: "", sep: ",", want: ""},
+		{input: ",", sep: ",", want: ""},
+	}
+
+	for _, tc := range tests {
+		got := splitAndRejoin(tc.input, tc.sep)
+		if !reflect.DeepEqual(tc.want, got) {
+			t.Fatalf("expected: %v, got: %v", tc.want, got)
+		}
+	}
 }
