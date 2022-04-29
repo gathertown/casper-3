@@ -24,3 +24,5 @@ spec:
               value: ${ZONE}
             - name: CLOUDFLARE_PROXIED
               value: "${CLOUDFLARE_PROXIED}"
+            - name: LABEL_VALUES
+              value: "${LABEL_VALUES}"

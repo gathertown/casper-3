@@ -27,8 +27,6 @@ spec:
               value: "60"
             - name: LABEL_KEY
               value: doks.digitalocean.com/node-pool
-            - name: LABEL_VALUES
-              value: "sfu"
             - name: ALLOW_SYNC_PODS
               value: "false"
           resources:

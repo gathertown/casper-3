@@ -41,6 +41,9 @@ commands:
       cloudflare_proxied:
         type: boolean
         default: false
+      label_values:
+        type: string
+        default: "sfu"
     steps:
       - checkout
       - kubernetes/install-kubectl
@@ -80,6 +83,7 @@ commands:
             - ZONE: <<parameters.zone>>
             - LOGLEVEL: <<parameters.level>>
             - CLOUDFLARE_PROXIED: <<parameters.cloudflare_proxied>>
+            - LABEL_VALUES: <<parameters.label_values>>
           command: |
             sed -i "s/__KUSTOMIZE_DOCKERHUB_CREDENTIALS__/$(echo -n ${DOCKERHUB_CREDENTIALS} | base64 -w0)/g" deployments/base/docker-registry.yaml
             cd deployments/overlays/cluster
@@ -147,6 +151,8 @@ jobs:
         type: string
       cloudflare_proxied:
         type: boolean
+      label_values:
+        type: string
     executor: docker/docker
     steps:
       - setup_remote_docker:
@@ -161,6 +167,7 @@ jobs:
           region: <<parameters.region>>
           cloud_provider: <<parameters.cloud_provider>>
           cloudflare_proxied: <<parameters.cloudflare_proxied>>
+          label_values: <<parameters.label_values>>
 
 workflows:
   build-and-push:
@@ -186,6 +193,7 @@ workflows:
           zone: gather.town
           level: debug
           cloudflare_proxied: true
+          label_values: "sfu, gameserver"
           filters:
             branches:
               only:
@@ -203,6 +211,7 @@ workflows:
           zone: gather.town
           level: debug
           cloudflare_proxied: true
+          label_values: "sfu"
           filters:
             branches:
               only:
@@ -226,6 +235,7 @@ workflows:
           zone: gather.town
           level: info
           cloudflare_proxied: false
+          label_values: "sfu"
           filters:
             branches:
               only:
