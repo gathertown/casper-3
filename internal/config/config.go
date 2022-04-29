@@ -4,6 +4,7 @@ package config
 
 import (
 	"os"
+	"strings"
 )
 
 const (
@@ -63,7 +64,7 @@ func FromEnv() *Config {
 		Env:                 env,
 		ScanIntervalSeconds: scanIntervalSeconds,
 		LabelKey:            labelKey,
-		LabelValues:         labelValues,
+		LabelValues:         splitAndRejoin(labelValues, ","),
 		Provider:            provider,
 		Token:               token,
 		Subdomain:           subdomain,
@@ -83,4 +84,19 @@ func getenv(key, fallback string) string {
 		return fallback
 	}
 	return v
+}
+
+// splitAndRejoin splits a string with a given seperator
+// and then join it back, with all the extraneous space and
+// trailing seperators removed
+func splitAndRejoin(str string, sep string) string {
+	parsed := []string{}
+	for _, v := range strings.Split(str, sep) {
+		val := strings.TrimSpace(v)
+		if val == "" {
+			continue
+		}
+		parsed = append(parsed, val)
+	}
+	return strings.Join(parsed, ", ")
 }
