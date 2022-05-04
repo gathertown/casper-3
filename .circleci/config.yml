@@ -2,7 +2,7 @@ version: 2.1
 
 orbs:
   docker: circleci/docker@1.7.0
-  doks: digitalocean/k8s@0.1.1
+  doctl: digitalocean/cli@0.1.1
   kubernetes: circleci/kubernetes@1.3.0
   slack: circleci/slack@4.1.4
   browser-tools: circleci/browser-tools@1.1.1
@@ -55,9 +55,10 @@ commands:
           condition:
             equal: [<<parameters.cloud_provider>>, "DigitalOcean"]
           steps:
-            - doks/install
-            - doks/initialize:
-                cluster: <<parameters.cluster>>
+            - doctl/install
+            - doctl/initialize
+            - run: |
+                doctl kubernetes cluster kubeconfig save <<parameters.cluster>>
       - when:
           condition:
             equal: [<<parameters.cloud_provider>>, "AmazonWebServices"]
