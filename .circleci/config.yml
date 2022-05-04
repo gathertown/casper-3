@@ -46,7 +46,8 @@ commands:
         default: "sfu"
     steps:
       - checkout
-      - kubernetes/install-kubectl
+      - kubernetes/install-kubectl:
+          kubectl-version: v1.21.11
       - envsbt/install
       - kuz/install:
           version: "v4.0.1"
