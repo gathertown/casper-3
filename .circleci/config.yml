@@ -195,7 +195,7 @@ workflows:
           zone: gather.town
           level: debug
           cloudflare_proxied: true
-          label_values: "sfu, gameserver"
+          label_values: "sfu, engine"
           filters:
             branches:
               only:
