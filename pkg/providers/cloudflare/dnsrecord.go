@@ -23,7 +23,12 @@ type Pod = common.Pod
 type CloudFlareDNS struct{}
 
 func NewCFClient() *cloudflare.API {
-	api, err := cloudflare.NewWithAPIToken(cfg.Token)
+	// If we have debug mode enabled, pass that over to the CF client as well
+	debug := false
+	if strings.ToLower(cfg.LogLevel) == "debug" {
+		debug = true
+	}
+	api, err := cloudflare.NewWithAPIToken(cfg.Token, cloudflare.Debug(debug))
 	if err != nil {
 		metrics.ExecErrInc(err.Error())
 		logger.Error("Error while creating client", "provider", cfg.Provider, "zone", cfg.Zone, "error", err.Error())
