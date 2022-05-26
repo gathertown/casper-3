@@ -304,12 +304,3 @@ workflows:
           environment: production-do-nyc3-c
           cluster: $K8S_PROD_NYC3_C
           subdomain: nyc3-c.prod.do
-
-      - deploy:
-          <<: *deploy-production
-          name: production-aws-us-east-1-a
-          environment: production-aws-us-east-1-a
-          cluster: $K8S_PROD_AWS_US_EAST_1_A
-          subdomain: us-east-1-a.prod.aws
-          cloud_provider: AmazonWebServices
-          region: us-east-1
