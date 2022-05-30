@@ -15,9 +15,6 @@ commands:
   deploy:
     description: "deliver application to kubernetes cluster"
     parameters:
-      token:
-        type: string
-        default: "TF_VAR_do_token"
       cloud_provider:
         type: string
       environment:
@@ -134,8 +131,6 @@ jobs:
     parameters:
       environment:
         type: string
-      token:
-        type: string
       cloud_provider:
         type: string
         default: "DigitalOcean"
@@ -161,7 +156,6 @@ jobs:
           version: 20.10.7
       - deploy:
           environment: <<parameters.environment>>
-          token: <<parameters.token>>
           cluster: <<parameters.cluster>>
           subdomain: <<parameters.subdomain>>
           zone: <<parameters.zone>>
@@ -189,7 +183,6 @@ workflows:
           requires:
             - build-and-push
           environment: development
-          token: TF_VAR_do_token
           cluster: $K8S_DEV_NYC1
           subdomain: dev.k8s
           zone: gather.town
@@ -206,7 +199,6 @@ workflows:
           name: staging-do-nyc3-a
           requires:
             - build-and-push
-          token: TF_VAR_cf_token
           environment: staging-do-nyc3-a
           cluster: $K8S_STG_NYC3_A
           subdomain: nyc3-a.stg.do
@@ -230,7 +222,6 @@ workflows:
           name: production-do-blr1-a
           requires:
             - build-and-push
-          token: TF_VAR_cf_token
           environment: production-do-blr1-a
           cluster: $K8S_PROD_BLR1_A
           subdomain: blr1-a.prod.do
