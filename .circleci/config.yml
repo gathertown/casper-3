@@ -10,6 +10,7 @@ orbs:
   kuz: finc/kustomize@0.0.1
   envsbt: sawadashota/envsubst@1.1.0
   aws-cli: circleci/aws-cli@2.1.0
+  gcp-cli: circleci/gcp-cli@2.4.1
 
 commands:
   deploy:
@@ -73,6 +74,16 @@ commands:
                 name: configure kubernetes cluster
                 command: |
                   aws eks --region <<parameters.region>> update-kubeconfig --name <<parameters.cluster>>
+      - when:
+          condition:
+            equal: [<<parameters.cloud_provider>>, "GoogleComputePlatform"]
+          steps:
+            - gcp-cli/install
+            - gcp-cli/initialize
+            - run:
+                name: configure kubernetes cluster
+                command: |
+                  gcloud container clusters get-credentials <<parameters.cluster>>
       - run:
           name: deploy casper-3 application to kubernetes cluster
           environment:
@@ -216,6 +227,14 @@ workflows:
           environment: staging-do-fra1-a
           cluster: $K8S_STG_FRA1_A
           subdomain: fra1-a.stg.do
+
+      - deploy:
+          <<: *deploy-staging
+          name: gke-poc
+          environment: staging-gke-poc
+          cluster: gather-gke-poc
+          subdomain: eu-west8.stg.gke
+          cloud_provider: "GoogleComputePlatform"
 
       # production clusters
       - deploy: &deploy-production
