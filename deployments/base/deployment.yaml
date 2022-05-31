@@ -31,8 +31,11 @@ spec:
               value: "false"
           resources:
             limits:
-              cpu: 1000m
-              memory: 300Mi
+              cpu: 75m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 48Mi
           securityContext:
             runAsUser: 5003
             runAsNonRoot: true
