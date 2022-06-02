@@ -30,7 +30,7 @@ spec:
             - name: ALLOW_SYNC_PODS
               value: "false"
           resources:
-            limits:
+            requests:
               cpu: 75m
               memory: 32Mi
             limits:
