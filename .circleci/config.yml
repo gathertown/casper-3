@@ -234,6 +234,7 @@ workflows:
           environment: staging-gke-poc
           cluster: gather-gke-poc
           subdomain: eu-west8.stg.gke
+          cloudflare_proxied: false
           cloud_provider: "GoogleComputePlatform"
 
       # production clusters
