@@ -198,7 +198,7 @@ workflows:
           subdomain: dev.k8s
           zone: gather.town
           level: debug
-          cloudflare_proxied_node_pools: "sfu, engine"
+          cloudflare_proxied_node_pools: "sfu"
           label_values: "sfu, engine"
           filters:
             branches:
@@ -215,7 +215,7 @@ workflows:
           subdomain: nyc3-a.stg.do
           zone: gather.town
           level: debug
-          cloudflare_proxied_node_pools: "sfu, engine"
+          cloudflare_proxied_node_pools: "sfu"
           label_values: "sfu, engine"
           filters:
             branches:
@@ -247,7 +247,7 @@ workflows:
           subdomain: blr1-a.prod.do
           zone: gather.town
           level: info
-          cloudflare_proxied_node_pools: "sfu, engine"
+          cloudflare_proxied_node_pools: "sfu"
           label_values: "sfu"
           filters:
             branches:
