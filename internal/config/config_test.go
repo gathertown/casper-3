@@ -30,6 +30,7 @@ func TestFromEnv(t *testing.T) {
 	setenv(t, "TOKEN", "abcd1231")
 	setenv(t, "SUBDOMAIN", "dev")
 	setenv(t, "ZONE", "k8s.gather.town")
+	setenv(t, "CLOUDFLARE_PROXIED_NODE_POOLS", "sfu, engine")
 
 	cfg := FromEnv()
 
@@ -63,6 +64,9 @@ func TestFromEnv(t *testing.T) {
 
 	if got, want := cfg.Zone, "k8s.gather.town"; got != want {
 		t.Errorf("FromEnv() 'ZONE' = %q; want %q", got, want)
+	}
+	if got, want := cfg.CloudflareProxiedNodePools, []string{"sfu", "engine"}; reflect.DeepEqual(want, got) == false {
+		t.Errorf("FromEnv() 'CLOUDFLARE_PROXIED_NODE_POOLS' = %q; want %q", got, want)
 	}
 
 	unsetenv(t, "ENV")
