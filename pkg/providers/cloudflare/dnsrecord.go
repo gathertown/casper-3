@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 
 	cloudflare "github.com/cloudflare/cloudflare-go"
@@ -361,10 +360,12 @@ func addRecord(ctx context.Context, client *cloudflare.API, zone string, subdoma
 		return false, err
 	}
 
-	proxied, err := strconv.ParseBool(cfg.CloudFlareProxied)
-	if err != nil {
-		metrics.ExecErrInc(err.Error())
-		return false, err
+	proxied := false
+	for _, p := range cfg.CloudflareProxiedNodePools {
+		if strings.HasPrefix(name, p) {
+			proxied = true
+			break
+		}
 	}
 
 	logger.Info("Added DNS record", "zone", zone, "name", sName, "type", "TXT", "success", txtRecord.Success)

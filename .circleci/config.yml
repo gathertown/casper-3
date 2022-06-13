@@ -36,9 +36,9 @@ commands:
       level:
         type: string
         default: "info"
-      cloudflare_proxied:
-        type: boolean
-        default: false
+      cloudflare_proxied_node_pools:
+        type: string
+        default: ""
       label_values:
         type: string
         default: "sfu"
@@ -92,7 +92,7 @@ commands:
             - SUBDOMAIN: <<parameters.subdomain>>
             - ZONE: <<parameters.zone>>
             - LOGLEVEL: <<parameters.level>>
-            - CLOUDFLARE_PROXIED: <<parameters.cloudflare_proxied>>
+            - CLOUDFLARE_PROXIED_NODE_POOLS: <<parameters.cloudflare_proxied_node_pools>>
             - LABEL_VALUES: <<parameters.label_values>>
           command: |
             sed -i "s/__KUSTOMIZE_DOCKERHUB_CREDENTIALS__/$(echo -n ${DOCKERHUB_CREDENTIALS} | base64 -w0)/g" deployments/base/docker-registry.yaml
@@ -157,8 +157,8 @@ jobs:
         default: "us-east-1"
       level:
         type: string
-      cloudflare_proxied:
-        type: boolean
+      cloudflare_proxied_node_pools:
+        type: string
       label_values:
         type: string
     executor: docker/docker
@@ -173,7 +173,7 @@ jobs:
           level: <<parameters.level>>
           region: <<parameters.region>>
           cloud_provider: <<parameters.cloud_provider>>
-          cloudflare_proxied: <<parameters.cloudflare_proxied>>
+          cloudflare_proxied_node_pools: <<parameters.cloudflare_proxied_node_pools>>
           label_values: <<parameters.label_values>>
 
 workflows:
@@ -198,7 +198,7 @@ workflows:
           subdomain: dev.k8s
           zone: gather.town
           level: debug
-          cloudflare_proxied: true
+          cloudflare_proxied_node_pools: "sfu, engine"
           label_values: "sfu, engine"
           filters:
             branches:
@@ -215,7 +215,7 @@ workflows:
           subdomain: nyc3-a.stg.do
           zone: gather.town
           level: debug
-          cloudflare_proxied: true
+          cloudflare_proxied_node_pools: "sfu, engine"
           label_values: "sfu, engine"
           filters:
             branches:
@@ -234,7 +234,7 @@ workflows:
           environment: staging-gke-poc
           cluster: gather-gke-poc
           subdomain: eu-west8.stg.gke
-          cloudflare_proxied: false
+          cloudflare_proxied_node_pools: ""
           cloud_provider: "GoogleComputePlatform"
 
       # production clusters
@@ -247,7 +247,7 @@ workflows:
           subdomain: blr1-a.prod.do
           zone: gather.town
           level: info
-          cloudflare_proxied: true
+          cloudflare_proxied_node_pools: "sfu, engine"
           label_values: "sfu"
           filters:
             branches:
