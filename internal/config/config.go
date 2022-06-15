@@ -105,5 +105,8 @@ func splitAndRejoin(str string, sep string) string {
 // slice of strings
 func stringToList(str string) []string {
 	normalizedStr := splitAndRejoin(str, ",")
+	if normalizedStr == "" {
+		return []string{}
+	}
 	return strings.Split(normalizedStr, ", ")
 }

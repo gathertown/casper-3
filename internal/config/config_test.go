@@ -107,3 +107,32 @@ func TestSplitAndRejoin(t *testing.T) {
 		}
 	}
 }
+
+func TestStringToList(t *testing.T) {
+	type test struct {
+		input string
+		sep   string
+		want  []string
+	}
+
+	tests := []test{
+		{input: "sfu,engine", sep: ",", want: []string{"sfu", "engine"}},
+		{input: "sfu, engine", sep: ",", want: []string{"sfu", "engine"}},
+		{input: "sfu, ,engine", sep: ",", want: []string{"sfu", "engine"}},
+		{input: "sfu,,,engine", sep: ",", want: []string{"sfu", "engine"}},
+		{input: "sfu,engine  ", sep: ",", want: []string{"sfu", "engine"}},
+		{input: "  sfu  ,  engine  ", sep: ",", want: []string{"sfu", "engine"}},
+		{input: " sfu,", sep: ",", want: []string{"sfu"}},
+		{input: "sfu", sep: ",", want: []string{"sfu"}},
+		{input: " sfu ", sep: ",", want: []string{"sfu"}},
+		{input: "", sep: ",", want: []string{}},
+		{input: ",", sep: ",", want: []string{}},
+	}
+
+	for _, tc := range tests {
+		got := stringToList(tc.input)
+		if !reflect.DeepEqual(tc.want, got) {
+			t.Fatalf("expected: %v, got: %v", tc.want, got)
+		}
+	}
+}
