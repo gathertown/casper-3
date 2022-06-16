@@ -228,15 +228,6 @@ workflows:
           cluster: $K8S_STG_FRA1_A
           subdomain: fra1-a.stg.do
 
-      - deploy:
-          <<: *deploy-staging
-          name: gke-poc
-          environment: staging-gke-poc
-          cluster: gather-gke-poc
-          subdomain: eu-west8.stg.gke
-          cloudflare_proxied_node_pools: ""
-          cloud_provider: "GoogleComputePlatform"
-
       # production clusters
       - deploy: &deploy-production
           name: production-do-blr1-a
