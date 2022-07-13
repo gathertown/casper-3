@@ -47,4 +47,4 @@ spec:
       imagePullSecrets:
         - name: priv-docker-registry
       nodeSelector:
-        doks.digitalocean.com/node-pool: infra
+        nodepool.gather.town/infra: "true"
